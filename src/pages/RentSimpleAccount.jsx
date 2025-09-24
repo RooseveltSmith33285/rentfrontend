@@ -416,9 +416,8 @@ setDashboardData((prev)=>{
   old={
     ...prev,
     user:{
-      ...user,
-      
-billingPaused:true
+      ...prev?.user,
+      billingPaused:true
     }
   }
 
