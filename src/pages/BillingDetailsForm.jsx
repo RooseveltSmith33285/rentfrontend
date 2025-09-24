@@ -800,7 +800,7 @@ export default function BillingDetailsForm() {
       
       console.log('=== BILLING FORM SUBMISSION START ===');
       console.log('Timestamp:', new Date().toISOString());
-      
+      alert("Please wait until payment is processed click ok to continue")
       // Create payment method with Stripe
       const { error, paymentMethod } = await stripe.createPaymentMethod({
         type: 'card',
