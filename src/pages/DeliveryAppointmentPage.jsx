@@ -592,7 +592,8 @@ export default function IntegratedConfirmDeliveryPage() {
             </div>
 
             {/* Map */}
-            <div className="mb-4 sm:mb-6">
+            {currentView === 'delivery'?<>
+              <div className="mb-4 sm:mb-6">
               <div className="bg-gray-100 rounded-lg h-48 sm:h-56 md:h-64 relative overflow-hidden">
                 {mapboxLoaded && userLocation ? (
                   <>
@@ -612,6 +613,8 @@ export default function IntegratedConfirmDeliveryPage() {
                 )}
               </div>
             </div>
+            </>:''}
+           
 
             {/* Selected Date Display */}
             <div className="mb-3 sm:mb-4">
