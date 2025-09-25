@@ -380,8 +380,7 @@ console.log(e.message)
       <div className="flex gap-3 mt-3">
         {order.status === 'active' && (
           <>
-            <button className="bg-teal-700 text-white font-bold px-4 py-3 rounded-xl">Manage</button>
-            <button className="bg-white text-teal-700 border border-teal-700 font-bold px-4 py-3 rounded-xl">View Agreement</button>
+           
           </>
         )}
         {order.status === 'overdue' && (
