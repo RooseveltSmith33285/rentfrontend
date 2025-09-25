@@ -50,59 +50,62 @@ const DeepFreezerIcon = () => (
 const DigitalSignature = ({ onSignatureChange, signature, label }) => {
   const canvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [hasSignature, setHasSignature] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
+    
+    // Set canvas size to container size
+    const container = canvas.parentElement;
+    canvas.width = container.clientWidth;
+    canvas.height = 120;
+
+    // Set drawing style
     ctx.strokeStyle = '#024a47';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    // Set canvas size
-    canvas.width = 400;
-    canvas.height = 120;
-
-    // Clear canvas with white background
+    // Clear canvas
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }, []);
 
-  const getCanvasCoordinates = (e) => {
+    // Load existing signature
+    if (signature) {
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      };
+      img.src = signature;
+    }
+  }, [signature]);
+
+  const getPosition = (e) => {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     
-    // Get the actual canvas dimensions
-    const canvasWidth = canvas.width;
-    const canvasHeight = canvas.height;
-    
-    // Get the displayed canvas dimensions
-    const displayWidth = rect.width;
-    const displayHeight = rect.height;
-    
-    // Calculate scaling factors
-    const scaleX = canvasWidth / displayWidth;
-    const scaleY = canvasHeight / displayHeight;
-    
-    // Get mouse/touch position relative to canvas
-    const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
-    const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
-    
-    const x = (clientX - rect.left) * scaleX;
-    const y = (clientY - rect.top) * scaleY;
-    
-    return { x, y };
+    if (e.type.includes('touch')) {
+      return {
+        x: e.touches[0].clientX - rect.left,
+        y: e.touches[0].clientY - rect.top
+      };
+    } else {
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    }
   };
 
   const startDrawing = (e) => {
     e.preventDefault();
     setIsDrawing(true);
+    
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    const { x, y } = getCanvasCoordinates(e);
+    const { x, y } = getPosition(e);
     
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -114,27 +117,31 @@ const DigitalSignature = ({ onSignatureChange, signature, label }) => {
     
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    const { x, y } = getCanvasCoordinates(e);
+    const { x, y } = getPosition(e);
     
     ctx.lineTo(x, y);
     ctx.stroke();
-    
-    setHasSignature(true);
-    onSignatureChange(canvas.toDataURL(), true);
   };
 
-  const stopDrawing = () => {
+  const stopDrawing = (e) => {
+    if (!isDrawing) return;
+    e.preventDefault();
+    
     setIsDrawing(false);
+    const canvas = canvasRef.current;
+    onSignatureChange(canvas.toDataURL(), true);
   };
 
   const clearSignature = () => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
+    
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    setHasSignature(false);
     onSignatureChange('', false);
   };
+
+  const hasSignature = !!signature;
 
   return (
     <div className="space-y-3">
@@ -151,10 +158,13 @@ const DigitalSignature = ({ onSignatureChange, signature, label }) => {
           </button>
         )}
       </div>
-      <div className="border-2 border-gray-300 rounded-lg bg-white relative">
+      <div 
+        className="border-2 border-gray-300 rounded-lg bg-white relative overflow-hidden"
+        style={{ height: '120px' }}
+      >
         <canvas
           ref={canvasRef}
-          className="w-full h-[120px] cursor-crosshair touch-none"
+          className="absolute inset-0 w-full h-full cursor-crosshair"
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}
@@ -167,7 +177,7 @@ const DigitalSignature = ({ onSignatureChange, signature, label }) => {
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="flex items-center gap-2 text-gray-400">
               <PenTool className="w-4 h-4" />
-              <span className="text-sm">Sign here</span>
+              <span className="text-sm">Click and drag to sign</span>
             </div>
           </div>
         )}
@@ -175,7 +185,7 @@ const DigitalSignature = ({ onSignatureChange, signature, label }) => {
     </div>
   );
 };
-
+// Agreement Modal Component
 // Agreement Modal Component
 const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false);
@@ -186,7 +196,8 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
   const [hasLessorSignature, setHasLessorSignature] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [currentDate] = useState(new Date().toLocaleDateString());
-  const [customerData,setCustomerData]=useState()
+  const [customerData, setCustomerData] = useState();
+  const [showAgreementContent, setShowAgreementContent] = useState(false);
 
   const handleScroll = (e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.target;
@@ -199,37 +210,54 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
     setHasCustomerSignature(hasSignature);
   };
 
-useEffect(()=>{
-getUserData();
-},[])
+  useEffect(() => {
+    getUserData();
+    // Auto-generate lessor signature
+    generateLessorSignature();
+  }, []);
 
-const getUserData=async()=>{
-try{
-let token=localStorage.getItem('token')
-let response=await axios.get(`${BASE_URL}/getUser`,{
-  headers:{
-    Authorization:`Bearer ${token}`
+  const generateLessorSignature = () => {
+    // Create a simple text-based signature for the lessor
+    const canvas = document.createElement('canvas');
+    canvas.width = 200;
+    canvas.height = 60;
+    const ctx = canvas.getContext('2d');
+    
+    ctx.font = '20px cursive';
+    ctx.fillStyle = '#000';
+    ctx.fillText('Rent Simple', 10, 35);
+    
+    const dataURL = canvas.toDataURL();
+    setLessorSignature(dataURL);
+    setHasLessorSignature(true);
+  };
+
+  const getUserData = async () => {
+    try {
+      let token = localStorage.getItem('token')
+      let response = await axios.get(`${BASE_URL}/getUser`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const encodedData = urlParams.get('data');
+
+      // Simple URL decoding
+      const decodedData = decodeURIComponent(encodedData);
+      const data = JSON.parse(decodedData);
+
+      console.log("Parsed data object:", data);
+      setCustomerData({
+        ...response.data.user,
+        ...data
+      })
+      setCustomerName(response.data.user.name)
+    } catch (e) {
+      console.log("Error:", e.message)
+    }
   }
-})
-console.log(response.data)
-console.log("getUser")
-
-const urlParams = new URLSearchParams(window.location.search);
-const encodedData = urlParams.get('data');
-
-const decodedData = atob(encodedData);
-
-const data = JSON.parse(decodedData);
-          console.log("Parsed data object:", data);
-setCustomerData({
-  ...response.data.user,
-  ...data
-})
-setCustomerName(response.data.user.name)
-}catch(e){
-
-}
-}
 
   const handleLessorSignatureChange = (signature, hasSignature) => {
     setLessorSignature(signature);
@@ -450,7 +478,7 @@ setCustomerName(response.data.user.name)
   };
 
   const handleAccept = () => {
-    if (agreedToTerms && isScrolledToBottom && hasCustomerSignature && hasLessorSignature && customerName.trim()) {
+    if (agreedToTerms && hasCustomerSignature && hasLessorSignature && customerName.trim()) {
       const signatureData = {
         customerSignature,
         lessorSignature,
@@ -465,16 +493,141 @@ setCustomerName(response.data.user.name)
     }
   };
 
-  const isFormComplete = agreedToTerms && isScrolledToBottom && hasCustomerSignature && hasLessorSignature && customerName.trim();
+  const isFormComplete = agreedToTerms && hasCustomerSignature && hasLessorSignature && customerName.trim();
 
   if (!isOpen) return null;
 
+  // Main landing view
+  if (!showAgreementContent) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-2xl w-full max-w-2xl p-8">
+          <div className="text-center space-y-8">
+            {/* Close button */}
+            <div className="flex justify-end">
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Title */}
+            <div className="space-y-4">
+              <h1 className="text-6xl font-bold text-[#024a47] leading-tight">
+                Rental<br />Agreement
+              </h1>
+            </div>
+
+            {/* View Agreement Button */}
+            <button
+              onClick={() => setShowAgreementContent(true)}
+              className="w-full max-w-md mx-auto bg-[#024a47] text-white text-xl font-semibold py-4 px-8 rounded-2xl hover:bg-[#035d57] transition-colors"
+            >
+              View Agreement
+            </button>
+
+            {/* Signature Section */}
+            <div className="space-y-6 max-w-md mx-auto">
+              <div className="border-2 border-gray-300 rounded-2xl p-8 min-h-[200px] flex flex-col items-center justify-center">
+                {!hasCustomerSignature ? (
+                  <div className="text-center space-y-4 w-full">
+                    <p className="text-gray-400 text-lg">Signature</p>
+                    <div className="space-y-4">
+                      <input
+                        type="text"
+                        value={customerData?.name || ''}
+                        disabled={true}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg text-center bg-gray-50"
+                        placeholder="Your name"
+                      />
+                      <div className="w-full">
+                        <DigitalSignature
+                          onSignatureChange={handleCustomerSignatureChange}
+                          signature={customerSignature}
+                          label="Sign here"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center space-y-4 w-full">
+                    <p className="text-[#024a47] font-semibold">Signed by:</p>
+                    <p className="text-lg">{customerData?.name}</p>
+                    <div className="border rounded-lg p-4 bg-gray-50">
+                      {customerSignature && (
+                        <img 
+                          src={customerSignature} 
+                          alt="Customer Signature" 
+                          className="max-w-full h-16 mx-auto"
+                        />
+                      )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setCustomerSignature('');
+                        setHasCustomerSignature(false);
+                      }}
+                      className="text-sm text-gray-500 underline hover:text-gray-700"
+                    >
+                      Clear signature
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Submit Button */}
+              <button
+                onClick={handleAccept}
+                disabled={!hasCustomerSignature || !agreedToTerms}
+                className={`w-full text-xl font-semibold py-4 px-8 rounded-2xl transition-colors ${
+                  hasCustomerSignature && agreedToTerms
+                    ? 'bg-[#024a47] text-white hover:bg-[#035d57]'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                Submit
+              </button>
+
+              {/* Terms Agreement Checkbox */}
+              <label className="flex items-start gap-3 cursor-pointer text-left">
+                <div 
+                  className={`w-6 h-6 mt-0.5 rounded border-2 border-[#024a47] flex items-center justify-center flex-shrink-0 ${
+                    agreedToTerms ? 'bg-[#024a47]' : 'bg-white'
+                  }`}
+                  onClick={() => setAgreedToTerms(!agreedToTerms)}
+                >
+                  {agreedToTerms && <Check className="w-4 h-4 text-white" />}
+                </div>
+                <span className="text-sm text-gray-700">
+                  I have read, understood, and agree to the terms and conditions of this Rent-to-Own Agreement. I acknowledge that this is a legally binding contract and that my digital signature is legally equivalent to a handwritten signature.
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Full agreement content view
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[95vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowAgreementContent(false)}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <div className="w-6 h-6 text-gray-500">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </div>
+            </button>
             <FileText className="w-8 h-8 text-[#024a47]" />
             <h2 className="text-2xl font-bold text-[#024a47]">Rent-to-Own Agreement</h2>
           </div>
@@ -592,43 +745,6 @@ setCustomerName(response.data.user.name)
             </div>
 
             <div className="border-t border-gray-300 pt-4">
-              <h3 className="font-bold text-[#024a47] mb-3">11. Digital Signatures</h3>
-              <div className="space-y-6">
-                {/* Customer Name Input */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Customer Full Name</label>
-                  <input
-                    type="text"
-                    value={customerData?.name}
-                    disabled={true}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#024a47] focus:border-transparent"
-                    placeholder="Enter your full name"
-                  />
-                </div>
-
-                {/* Customer Signature */}
-                <DigitalSignature
-                  signature={customerSignature}
-                  onSignatureChange={handleCustomerSignatureChange}
-                  label="Customer Signature"
-                />
-
-                {/* Lessor Signature */}
-                <DigitalSignature
-                  signature={lessorSignature}
-                  onSignatureChange={handleLessorSignatureChange}
-                  label="Lessor (Rent Simple) Signature"
-                />
-
-                <div className="flex justify-between text-sm">
-                  <span>Date: {currentDate}</span>
-                  <span>Date: {currentDate}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t border-gray-300 pt-4">
               <h3 className="font-bold text-[#024a47] mb-3">Schedule A: Pricing</h3>
               <ul className="space-y-2">
                 <li>TVs: $_/month (or $1 per inch per month)</li>
@@ -644,55 +760,29 @@ setCustomerName(response.data.user.name)
         {/* Scroll Indicator */}
         {!isScrolledToBottom && (
           <div className="px-6 py-2 bg-yellow-50 border-t border-yellow-200 text-center">
-            <p className="text-sm text-yellow-700">Please scroll down to read the complete agreement and sign</p>
+            <p className="text-sm text-yellow-700">Please scroll down to read the complete agreement</p>
           </div>
         )}
 
         {/* Footer */}
-        <div className="p-6 border-t border-gray-200 space-y-4">
-          <label className="flex items-start gap-3 cursor-pointer">
-            <div 
-              className={`w-6 h-6 mt-0.5 rounded border-2 border-[#024a47] flex items-center justify-center flex-shrink-0 ${
-                agreedToTerms ? 'bg-[#024a47]' : 'bg-white'
-              }`}
-              onClick={() => setAgreedToTerms(!agreedToTerms)}
-            >
-              {agreedToTerms && <Check className="w-4 h-4 text-white" />}
-            </div>
-            <span className="text-sm text-gray-700">
-              I have read, understood, and agree to the terms and conditions of this Rent-to-Own Agreement. I acknowledge that this is a legal binding contract and that my digital signature is legally equivalent to a handwritten signature.
-            </span>
-          </label>
-
-          {/* Validation Messages */}
-          {!isFormComplete && (
-            <div className="text-sm text-red-600 space-y-1">
-              {!customerName.trim() && <p>• Please enter your full name</p>}
-              {!hasCustomerSignature && <p>• Please provide your digital signature</p>}
-              {!hasLessorSignature && <p>• Lessor signature is required</p>}
-              {!isScrolledToBottom && <p>• Please scroll to the bottom of the agreement</p>}
-              {!agreedToTerms && <p>• Please agree to the terms and conditions</p>}
-            </div>
-          )}
-
-          <div className="flex gap-3 justify-end">
+        <div className="p-6 border-t border-gray-200">
+          <div className="flex gap-3 justify-between">
             <button
-              onClick={onClose}
+              onClick={() => setShowAgreementContent(false)}
               className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              Cancel
+              Back to Signature
             </button>
-            <button
-              onClick={handleAccept}
-              disabled={!isFormComplete}
-              className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
-                isFormComplete
-                  ? 'bg-[#024a47] text-white hover:bg-[#035d57]'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              Accept Agreement & Complete Setup
-            </button>
+            <div className="text-sm text-gray-600 flex items-center">
+              {isScrolledToBottom ? (
+                <span className="text-green-600 flex items-center gap-2">
+                  <Check className="w-4 h-4" />
+                  Agreement reviewed
+                </span>
+              ) : (
+                <span>Scroll to bottom to continue</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -848,10 +938,12 @@ export default function BillingDetailsForm() {
       
       const urlParams = new URLSearchParams(window.location.search);
       const encodedData = urlParams.get('data');
-      
-      const decodedData = atob(encodedData);
-      
+  
+      // Simple URL decoding
+      const decodedData = decodeURIComponent(encodedData);
       const data = JSON.parse(decodedData);
+
+      
        let responsetwo=await axios.post(`${BASE_URL}/createOrder`,data,{headers:{
         Authorization:`Bearer ${token}`
       }})

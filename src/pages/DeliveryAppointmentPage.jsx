@@ -1,87 +1,325 @@
+import React, { useState, useEffect, useRef } from "react";
+import { ArrowLeft, Home, CheckCircle, ChevronDown, Calendar, Clock, MapPin, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import axios from "axios";
-import { ArrowLeft, Home, CheckCircle, ChevronDown, Calendar, Clock, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
-import React, { useState, useEffect } from "react";
-import { ToastContainer,toast } from "react-toastify";
+import { toast } from "react-toastify";
 import { BASE_URL } from "../baseUrl";
 import { useNavigate } from "react-router-dom";
+
+// Mock data for fallback
+const mockCartItems = [
+  {
+    id: 1,
+    name: "Smart TV 55\"",
+    monthly_price: 49.99,
+    photo: "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=100&h=100&fit=crop"
+  },
+  {
+    id: 2,
+    name: "Gaming Console",
+    monthly_price: 29.99,
+    photo: "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=100&h=100&fit=crop"
+  }
+];
+
+const mockOrders = [];
 
 export default function IntegratedConfirmDeliveryPage() {
   const [showTechDetails, setShowTechDetails] = useState(false);
   const [showDeliverySchedule, setShowDeliverySchedule] = useState(false);
-  const [currentView, setCurrentView] = useState('delivery'); // Changed to 'delivery' initially
-  const [cartItems,setCartItems]=useState([])
-  const navigate=useNavigate();
-  // Delivery scheduling states
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [orders,setOrders]=useState([])
+  const [currentView, setCurrentView] = useState('delivery');
+  const [cartItems, setCartItems] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [disabledTimeSlots, setDisabledTimeSlots] = useState([]);
   const [selectedTime, setSelectedTime] = useState("3:00 PM");
   const [userLocation, setUserLocation] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [totalCost, setTotalCost] = useState(0);
   const [mapError, setMapError] = useState("");
-  const [totalCost,setTotalCost]=useState()
+  
+  // Mapbox related states
+  const mapContainer = useRef(null);
+  const map = useRef(null);
+  const [mapboxLoaded, setMapboxLoaded] = useState(false);
+  const [locationQuery, setLocationQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [selectedLocationName, setSelectedLocationName] = useState('');
 
-  // Get user's current location
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-          setMapError("");
-        },
-        (error) => {
-          console.log("Location access denied, using default location");
-          setMapError("Could not access your location. Showing default location.");
-          setUserLocation({ lat: 40.7128, lng: -74.0060 });
-        }
-      );
-    } else {
-      setMapError("Geolocation is not supported by this browser.");
-      setUserLocation({ lat: 40.7128, lng: -74.0060 });
-    }
-  }, []);
+  const navigate = useNavigate();
+  const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGF3YXJhbGkiLCJhIjoiY21hbzdyb2p3MDU1cjJrczM5c3JpYTdkOSJ9.R405LfNX3bZBpn7We7mpLA';
 
   const timeSlots = [
     "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
     "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM"
   ];
 
-  // Add the missing functions
+  // Load cart items and orders on component mount
+  useEffect(() => {
+    getCartItems();
+    verifyCalendar();
+  }, []);
+
+  // Get user's current location
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const newLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          setUserLocation(newLocation);
+          reverseGeocode(newLocation);
+          setMapError("");
+        },
+        (error) => {
+          console.log("Location access denied, using default location");
+          setMapError("Could not access your location. Showing default location.");
+          const defaultLocation = { lat: 40.7128, lng: -74.0060 };
+          setUserLocation(defaultLocation);
+          setSelectedLocationName("New York, NY, USA");
+        }
+      );
+    } else {
+      setMapError("Geolocation is not supported by this browser.");
+      const defaultLocation = { lat: 40.7128, lng: -74.0060 };
+      setUserLocation(defaultLocation);
+      setSelectedLocationName("New York, NY, USA");
+    }
+  }, []);
+
+  // Load Mapbox GL JS
+  useEffect(() => {
+    if (!mapboxLoaded) {
+      // Load Mapbox CSS
+      const cssLink = document.createElement('link');
+      cssLink.href = 'https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css';
+      cssLink.rel = 'stylesheet';
+      document.head.appendChild(cssLink);
+
+      // Load Mapbox JS
+      const script = document.createElement('script');
+      script.src = 'https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js';
+      script.onload = () => {
+        setMapboxLoaded(true);
+      };
+      document.head.appendChild(script);
+
+      return () => {
+        document.head.removeChild(cssLink);
+        document.head.removeChild(script);
+      };
+    }
+  }, [mapboxLoaded]);
+
+  // Initialize map when Mapbox is loaded
+  useEffect(() => {
+    if (mapboxLoaded && mapContainer.current && !map.current && userLocation) {
+      window.mapboxgl.accessToken = MAPBOX_TOKEN;
+      
+      map.current = new window.mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [userLocation.lng, userLocation.lat],
+        zoom: 13
+      });
+
+      // Add marker
+      new window.mapboxgl.Marker({
+        color: '#024a47'
+      })
+      .setLngLat([userLocation.lng, userLocation.lat])
+      .addTo(map.current);
+
+      // Add navigation controls
+      map.current.addControl(new window.mapboxgl.NavigationControl());
+    }
+  }, [mapboxLoaded, userLocation]);
+
+  // Update map when location changes
+  useEffect(() => {
+    if (map.current && userLocation) {
+      map.current.flyTo({
+        center: [userLocation.lng, userLocation.lat],
+        zoom: 13
+      });
+
+      // Remove existing markers
+      const markers = document.querySelectorAll('.mapboxgl-marker');
+      markers.forEach(marker => marker.remove());
+
+      // Add new marker
+      new window.mapboxgl.Marker({
+        color: '#024a47'
+      })
+      .setLngLat([userLocation.lng, userLocation.lat])
+      .addTo(map.current);
+    }
+  }, [userLocation]);
+
+  // Fetch cart items from API
+  const getCartItems = async () => {
+    try {
+      let token = localStorage.getItem('token');
+      let response = await axios.get(`${BASE_URL}/getCartItems`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      console.log("Cart items:", response.data.cartItems);
+      setCartItems(response.data.cartItems?.items || mockCartItems);
+      
+      // Calculate total cost
+      let totalCost = 0;
+      if (response.data.cartItems?.items) {
+        for (let i = 0; i < response.data.cartItems.items.length; i++) {
+          totalCost += response.data.cartItems.items[i].monthly_price;
+        }
+      } else {
+        // Use mock data total if API fails
+        totalCost = mockCartItems.reduce((sum, item) => sum + item.monthly_price, 0);
+      }
+      setTotalCost(totalCost);
+
+    } catch (e) {
+      console.error("Error fetching cart items:", e.message);
+      toast.error("Error loading cart items");
+      // Fallback to mock data
+      setCartItems(mockCartItems);
+      setTotalCost(mockCartItems.reduce((sum, item) => sum + item.monthly_price, 0));
+    }
+  };
+
+  // Fetch calendar data from API
+  const verifyCalendar = async () => {
+    try {
+      let token = localStorage.getItem('token');
+      let response = await axios.get(`${BASE_URL}/verifyCalandar`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      console.log("Calendar data:", response.data);
+      setOrders(response.data.orders || []);
+    } catch (e) {
+      console.error("Error fetching calendar data:", e);
+      toast.error("Error loading delivery schedule");
+      setOrders(mockOrders);
+    }
+  };
+
+  // Reverse geocoding to get location name
+  const reverseGeocode = async (location) => {
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${location.lng},${location.lat}.json?access_token=${MAPBOX_TOKEN}`
+      );
+      const data = await response.json();
+      if (data.features && data.features.length > 0) {
+        setSelectedLocationName(data.features[0].place_name);
+      }
+    } catch (error) {
+      console.error('Error reverse geocoding:', error);
+    }
+  };
+
+  // Search for locations
+  const searchLocation = async (query) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&limit=8&types=place,locality,neighborhood,address`
+      );
+      const data = await response.json();
+      
+      if (data.features && data.features.length > 0) {
+        setSearchResults(data.features);
+        setShowSearchResults(true);
+      } else {
+        setSearchResults([]);
+        setShowSearchResults(false);
+      }
+    } catch (error) {
+      console.error('Error searching location:', error);
+      setSearchResults([]);
+      setShowSearchResults(false);
+    }
+  };
+
+  // Debounce timer ref
+  const searchTimeoutRef = useRef(null);
+
+  // Handle location input change
+  const handleLocationInputChange = (e) => {
+    const value = e.target.value;
+    setLocationQuery(value);
+    
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    // Set new timeout for debounced search
+    searchTimeoutRef.current = setTimeout(() => {
+      searchLocation(value);
+    }, 300);
+  };
+
+  // Handle Enter key press in search input
+  const handleLocationInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (searchResults.length > 0) {
+        // Select the first search result
+        selectLocation(searchResults[0]);
+      } else if (locationQuery.trim()) {
+        // Force search if no results are shown
+        searchLocation(locationQuery);
+      }
+    }
+  };
+
+  // Select a location from search results
+  const selectLocation = (feature) => {
+    const [lng, lat] = feature.center;
+    setUserLocation({ lat, lng });
+    setSelectedLocationName(feature.place_name);
+    setLocationQuery('');
+    setShowSearchResults(false);
+  };
+
   const isDateAvailable = (date) => {
-    // Check if the date has any available time slots
-    // If all time slots are booked for this date, return false
     const dateString = date.toDateString();
     const bookedSlotsForDate = orders.filter(order => {
       const orderDate = new Date(order.deliveryDate).toDateString();
       return orderDate === dateString;
     });
-    
-    // If all time slots are booked, the date is not available
     return bookedSlotsForDate.length < timeSlots.length;
   };
 
   const isTimeSlotAvailable = (date, timeSlot) => {
-    // Check if a specific time slot is available for the given date
     const dateString = date.toDateString();
     const isBooked = orders.some(order => {
       const orderDate = new Date(order.deliveryDate).toDateString();
       return orderDate === dateString && order.deliveryTime === timeSlot;
     });
-    
     return !isBooked;
   };
 
-  // Update disabled time slots when date changes
   useEffect(() => {
     const updateDisabledTimeSlots = () => {
       const disabled = timeSlots.filter(timeSlot => !isTimeSlotAvailable(selectedDate, timeSlot));
       setDisabledTimeSlots(disabled);
       
-      // If selected time is now disabled, pick the first available one
       if (disabled.includes(selectedTime)) {
         const availableTime = timeSlots.find(slot => !disabled.includes(slot));
         if (availableTime) {
@@ -121,76 +359,33 @@ export default function IntegratedConfirmDeliveryPage() {
     setSelectedDate(newDate);
   };
 
-  const handleConfirmOrder = async() => {
-    try{
-      console.log(selectedTime)
-      console.log(userLocation)
-      console.log(currentMonth)
-   
+  const handleConfirmOrder = async () => {
+    try {
+      if (!userLocation) {
+        toast.error("Please select a delivery location");
+        return;
+      }
+  
       const response = await axios.get(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${userLocation.lng},${userLocation.lat}.json?access_token=pk.eyJ1IjoiZGF3YXJhbGkiLCJhIjoiY21hbzdyb2p3MDU1cjJrczM5c3JpYTdkOSJ9.R405LfNX3bZBpn7We7mpLA`
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${userLocation.lng},${userLocation.lat}.json?access_token=${MAPBOX_TOKEN}`
       );
       
-      let token=localStorage.getItem('token')
-      let data={
-        location:userLocation,deliveryDate:currentMonth,deliveryTime:selectedTime,locationName:response.data.features[0].place_name
-      }
-    
-      // let response=await axios.post(`${BASE_URL}/createOrder`,{location:userLocation,deliveryDate:currentMonth,deliveryTime:selectedTime},{headers:{
-      //   Authorization:`Bearer ${token}`
-      // }})
-
-    
-      const encodedData = btoa(JSON.stringify(data));
-    
-      navigate(`/billing?data=${encodeURIComponent(encodedData)}`);
-
-    }catch(e){
-      console.log(e.message)
-    }
-  };
-
-  useEffect(()=>{
-    getCartItems();
-    verifycalandar();
-  },[])
+      let orderData = {
+        location: userLocation,
+        deliveryDate: selectedDate,
+        deliveryTime: selectedTime,
+        locationName: response.data.features[0]?.place_name || selectedLocationName
+      };
   
-  const verifycalandar = async () => {
-    try {
-      let token = localStorage.getItem('token');
-      let response = await axios.get(`${BASE_URL}/verifyCalandar`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      console.log("verifyCalandar");
-      console.log(response.data);
-      setOrders(response.data.orders || []);
+      // Simple URL encoding - no base64
+      const encodedData = encodeURIComponent(JSON.stringify(orderData));
+      navigate(`/billing?data=${encodedData}`);
+  
     } catch (e) {
-      console.error("Error fetching calendar data:", e);
-      toast.error("Error loading delivery schedule");
+      console.error("Error confirming order:", e.message);
+      toast.error("Error confirming order");
     }
   };
-
-  const getCartItems=async(req,res)=>{
-    try{
-      let token=localStorage.getItem('token')
-      let response=await axios.get(`${BASE_URL}/getCartItems`,{headers:{
-        Authorization:`Bearer ${token}`
-      }})
-
-      console.log(response.data.cartItems)
-      setCartItems(response.data.cartItems.items)
-      let totalCost = 0;
-      for(let i = 0; i < response.data.cartItems.items.length; i++) {
-        totalCost = response.data.cartItems.items[i].monthly_price + totalCost
-        setTotalCost(totalCost)
-      }
-
-    }catch(e){
-      console.log(e.message)
-    }
-  }
 
   const handleScheduleDelivery = () => {
     setCurrentView('delivery');
@@ -210,12 +405,10 @@ export default function IntegratedConfirmDeliveryPage() {
     const firstDay = getFirstDayOfMonth(currentMonth);
     const days = [];
     
-    // Empty cells for days before the first day of the month
     for (let i = 0; i < firstDay; i++) {
       days.push(<div key={`empty-${i}`} className="h-8 sm:h-10"></div>);
     }
     
-    // Days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
       const isSelected = selectedDate.getDate() === day && 
@@ -279,7 +472,6 @@ export default function IntegratedConfirmDeliveryPage() {
           {days}
         </div>
         
-        {/* Legend */}
         <div className="mt-3 flex items-center justify-center gap-4 text-xs">
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 bg-red-100 rounded-full"></div>
@@ -337,7 +529,6 @@ export default function IntegratedConfirmDeliveryPage() {
         <div className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl bg-white rounded-lg shadow-lg overflow-hidden mx-auto">
           {/* Header */}
           <div className="bg-white px-4 sm:px-6 md:px-8 pt-6 sm:pt-8 pb-4 sm:pb-6 text-center">
-            {/* Back arrow */}
             <div className="flex justify-start mb-4">
               <ArrowLeft 
                 className="w-5 h-5 sm:w-6 sm:h-6 text-[#024a47] cursor-pointer" 
@@ -354,44 +545,69 @@ export default function IntegratedConfirmDeliveryPage() {
 
           {/* Content Container */}
           <div className="px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8">
+            {/* Location Search */}
+            <div className="mb-4 sm:mb-6">
+              <div className="relative">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search for a location..."
+                    value={locationQuery}
+                    onChange={handleLocationInputChange}
+                    onKeyPress={handleLocationInputKeyPress}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#024a47] focus:border-transparent"
+                  />
+                </div>
+                
+                {/* Search Results */}
+                {showSearchResults && searchResults.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto z-10">
+                    {searchResults.map((feature, index) => (
+                      <button
+                        key={index}
+                        onClick={() => selectLocation(feature)}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                      >
+                        <div className="font-medium text-gray-900 text-sm">
+                          {feature.place_name}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Selected Location Display */}
+            <div className="mb-4 sm:mb-6">
+              <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-[#024a47] flex-shrink-0" />
+                  <span className="text-sm sm:text-base font-medium text-[#024a47] truncate">
+                    {selectedLocationName || "Loading location..."}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             {/* Map */}
             <div className="mb-4 sm:mb-6">
-              <div className="bg-gray-100 rounded-lg h-32 sm:h-40 md:h-48 relative overflow-hidden">
-                {userLocation ? (
-                  <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-blue-100">
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 scale-75">
-                      <div className="relative">
-                        <div className="grid grid-cols-5 gap-1 opacity-40">
-                          {[...Array(25)].map((_, i) => (
-                            <div key={i} className="w-6 h-6 sm:w-8 sm:h-8 border border-gray-300 rounded-sm"></div>
-                          ))}
-                        </div>
-                        
-                        <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-400 opacity-50 transform -translate-y-1/2"></div>
-                        <div className="absolute left-1/2 top-0 bottom-0 w-1 bg-gray-400 opacity-50 transform -translate-x-1/2"></div>
-                        
-                        <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-red-500 fill-red-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
-                      </div>
-                    </div>
-                    
+              <div className="bg-gray-100 rounded-lg h-48 sm:h-56 md:h-64 relative overflow-hidden">
+                {mapboxLoaded && userLocation ? (
+                  <>
+                    <div ref={mapContainer} className="w-full h-full rounded-lg" />
                     {mapError && (
                       <div className="absolute bottom-2 left-0 right-0 bg-yellow-100 text-yellow-800 text-xs p-2 text-center">
                         {mapError}
                       </div>
                     )}
-                    
-                    <div className="absolute bottom-2 right-2 bg-white px-2 py-1 rounded text-xs shadow">
-                      {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}
-                    </div>
-                    
-                    <div className="absolute top-2 right-2 flex flex-col gap-1">
-                      <button className="w-5 h-5 sm:w-6 sm:h-6 bg-white rounded shadow flex items-center justify-center text-xs font-bold">+</button>
-                      <button className="w-5 h-5 sm:w-6 sm:h-6 bg-white rounded shadow flex items-center justify-center text-xs font-bold">-</button>
-                    </div>
-                  </div>
+                  </>
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-gray-500 text-sm sm:text-base">Loading location...</div>
+                    <div className="text-gray-500 text-sm sm:text-base">
+                      {userLocation ? "Loading map..." : "Getting your location..."}
+                    </div>
                   </div>
                 )}
               </div>
@@ -435,7 +651,7 @@ export default function IntegratedConfirmDeliveryPage() {
               </div>
             </div>
 
-            {/* Calendar and Time Selection (shown when See More is clicked) */}
+            {/* Calendar and Time Selection */}
             {showCalendar && (
               <div className="mb-4 sm:mb-6">
                 <CalendarComponent />
@@ -443,7 +659,7 @@ export default function IntegratedConfirmDeliveryPage() {
               </div>
             )}
 
-            {/* Select Button */}
+            {/* Schedule Button */}
             <button 
               className="w-full bg-[#024a47] hover:bg-[#024a47] text-white font-semibold py-3 sm:py-4 px-4 rounded-lg transition-colors text-base sm:text-lg lg:text-xl"
               onClick={handleDeliveryScheduled}
@@ -456,13 +672,12 @@ export default function IntegratedConfirmDeliveryPage() {
     );
   }
 
-  // Confirm & Submit View (default)
+  // Confirm & Submit View
   return (
     <div className="min-h-screen bg-[#f3f4e6] flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl bg-white rounded-lg shadow-lg overflow-hidden mx-auto">
         
         <div className="bg-white px-4 sm:px-6 md:px-8 pt-6 sm:pt-8 pb-4 sm:pb-6 text-center">
-          {/* Back arrow */}
           <div className="flex justify-start mb-4">
             <ArrowLeft 
               className="w-5 h-5 sm:w-6 sm:h-6 text-[#024a47] cursor-pointer" 
@@ -479,30 +694,27 @@ export default function IntegratedConfirmDeliveryPage() {
 
         <div className="px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8">
           {/* Order Details */}
-          {cartItems?.map((val,i)=>{
-            return (
-              <div key={i} className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 mb-4 sm:mb-6 shadow-sm">
-                <div className="flex items-start gap-3 sm:gap-4">
-                  {/* Product icon */}
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#024a47] rounded-lg flex items-center justify-center flex-shrink-0">
-                    <img src={val?.photo} className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+          {cartItems?.map((val, i) => (
+            <div key={i} className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 mb-4 sm:mb-6 shadow-sm">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#024a47] rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  <img src={val?.photo} alt={val?.name} className="w-full h-full object-cover rounded-lg" />
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h3 className="text-sm sm:text-base font-medium text-gray-600">Product</h3>
+                      <h4 className="text-base sm:text-lg font-bold text-gray-900">{val?.name}</h4>
+                    </div>
                   </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="text-sm sm:text-base font-medium text-gray-600">Orefer SL 25</h3>
-                        <h4 className="text-base sm:text-lg font-bold text-gray-900">{val?.name}</h4>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between text-sm sm:text-base">
-                      <span className="text-gray-600">${val?.monthly_price}/month</span>
-                    </div>
+                  <div className="flex items-center justify-between text-sm sm:text-base">
+                    <span className="text-gray-600">${val?.monthly_price}/month</span>
                   </div>
                 </div>
               </div>
-            )
-          })}
+            </div>
+          ))}
 
           <div className="mb-4 text-right">
             <span className="text-gray-900 font-semibold text-lg">Total ${totalCost}/month</span>
@@ -520,7 +732,6 @@ export default function IntegratedConfirmDeliveryPage() {
               </div>
             </div>
 
-            {/* Schedule Delivery Button */}
             {!showDeliverySchedule && (
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <button 
@@ -532,9 +743,12 @@ export default function IntegratedConfirmDeliveryPage() {
               </div>
             )}
 
-            {/* Scheduled Delivery Info */}
             {showDeliverySchedule && (
               <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-[#4a9b8e]" />
+                  <span className="text-sm sm:text-base font-medium text-gray-900 truncate">{selectedLocationName}</span>
+                </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-[#4a9b8e]" />
                   <span className="text-sm sm:text-base font-medium text-gray-900">{formatDate(selectedDate)}</span>
@@ -559,14 +773,14 @@ export default function IntegratedConfirmDeliveryPage() {
               {/* Avatar */}
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-amber-600 rounded-full flex-shrink-0 overflow-hidden">
                 <div className="w-full h-full bg-gradient-to-br from-amber-400 to-amber-700 flex items-center justify-center">
-                  <img src="./technican.jpg" alt="Technician" className="w-full h-full object-cover"/>
+                  <img src={"./technican.jpg"} alt="Technician" className="w-full h-full object-cover"/>
                 </div>
               </div>
               
               <div className="flex-1 min-w-0">
                 <h3 className="text-base text-start sm:text-lg font-bold text-gray-900 mb-1">Roosevelt Smith</h3>
                 <p className="text-sm text-start sm:text-base text-gray-600 mb-2">Certified RentSimple Technician</p>
-                <p className="text-sm sm:text-base text-start text-gray-600 mb-2">Technician</p>
+
                 
                 <button 
                   onClick={() => setShowTechDetails(!showTechDetails)}
