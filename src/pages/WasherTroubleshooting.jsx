@@ -55,7 +55,7 @@ export default function WasherTroubleshooting() {
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-[#e2f4f8] from-slate-50 to-blue-50 min-h-screen">
-      {/* Header */}
+     
       <div className="text-center mb-8">
         <div className="flex items-center mx-[1rem] justify-center gap-4 mb-6">
           <div className="bg-[#074a6d] p-4 rounded-2xl shadow-lg">
@@ -74,18 +74,18 @@ export default function WasherTroubleshooting() {
         
       </div>
 
-      {/* Troubleshooting Steps */}
+    
       <div className="space-y-6">
         {troubleshootingSteps.map((step, index) => (
           <div key={index} className="rounded-xl  hover:shadow-lg transition-shadow duration-300 overflow-hidden">
             <div className="flex items-start p-6">
-              {/* Icon Circle */}
+          
               <div className="flex-shrink-0 w-16 h-16 border-2 border-[#044869] rounded-full flex items-center justify-center mr-6 shadow-lg">
   {step.icon}
 </div>
 
               
-              {/* Content */}
+         
               <div className="flex-1">
                 <h3 className="text-xl font-bold text-[#044869] mb-2 flex items-center gap-3">
                   <span className="text-[#044869]">{step.number}.</span>
@@ -100,7 +100,7 @@ export default function WasherTroubleshooting() {
         ))}
       </div>
 
-      {/* Footer Note */}
+   
       
     </div>
   );

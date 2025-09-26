@@ -20,15 +20,15 @@ export default function ApplianceRentalPage() {
     try {
       let token = localStorage.getItem('token');
       
-      // Check if it's a combo appliance
+     
       if (appliance.combo === true && !selectedAppliances.includes(appliance._id)) {
         setSelectedComboAppliance(appliance);
         setShowComboPopup(true);
-        return; // Wait for user to select plug type
+        return; 
       }
       
       if (selectedAppliances.includes(appliance._id)) {
-        // Remove from cart
+      
         await axios.delete(`${BASE_URL}/removeFromCart`, {
           data: { applianceId: appliance._id },
           headers: {
@@ -36,11 +36,11 @@ export default function ApplianceRentalPage() {
           }
         });
       } else {
-        // Add to cart
+       
         await addToCart(appliance);
       }
       
-      // Immediately fetch updated cart to sync with server
+    
       await fetchCartItems();
       
     } catch(e) {
@@ -54,7 +54,7 @@ export default function ApplianceRentalPage() {
       let token = localStorage.getItem('token');
       let payload = { applianceId: appliance._id };
       
-      // If it's a combo appliance and plug type is provided, add comboItem data
+    
       if (appliance.combo === true && plugType) {
         payload.comboItem = {
           plugType: plugType,
@@ -71,7 +71,7 @@ export default function ApplianceRentalPage() {
       });
       
     } catch(e) {
-      throw e; // Re-throw to be handled by calling function
+      throw e;
     }
   };
 
@@ -81,7 +81,7 @@ export default function ApplianceRentalPage() {
       
       if (selectedComboAppliance) {
         await addToCart(selectedComboAppliance, plugType);
-        await fetchCartItems(); // This will update the selectedAppliances state
+        await fetchCartItems(); 
       }
       
       setShowComboPopup(false);
@@ -115,7 +115,7 @@ export default function ApplianceRentalPage() {
       
       setCartItems(items);
       
-      // Only update selectedAppliances if different
+    
       const idsOnly = items.map(val => val._id);
       setSelectedAppliances(prev => {
         if (prev.length !== idsOnly.length || !idsOnly.every(id => prev.includes(id))) {
@@ -169,11 +169,11 @@ export default function ApplianceRentalPage() {
     }
   }
 
-  // Combo Popup Component - UPDATED
+
   const ComboPopup = ({showComboPopup, selectedPlugType, setShowComboPopup, setSelectedPlugType, selectedComboAppliance, handlePlugTypeSelect}) => {
    
     const handlePlugSelect = (plugType) => {
-      // Call the main function that handles the API call
+     
       handlePlugTypeSelect(plugType);
     };
   
@@ -188,7 +188,7 @@ export default function ApplianceRentalPage() {
             stroke="#024a47" 
             strokeWidth="3"
           />
-          {/* 3-prong outlet slots */}
+         
           <line x1="35" y1="25" x2="45" y2="35" stroke="#024a47" strokeWidth="4" strokeLinecap="round" />
           <line x1="65" y1="25" x2="55" y2="35" stroke="#024a47" strokeWidth="4" strokeLinecap="round" />
           <line x1="50" y1="60" x2="50" y2="75" stroke="#024a47" strokeWidth="4" strokeLinecap="round" />
@@ -207,7 +207,7 @@ export default function ApplianceRentalPage() {
             stroke="#024a47" 
             strokeWidth="3"
           />
-          {/* 4-prong outlet slots */}
+      
           <rect x="35" y="25" width="4" height="15" fill="#024a47" rx="2" />
           <rect x="48" y="25" width="4" height="15" fill="#024a47" rx="2" />
           <rect x="61" y="25" width="4" height="15" fill="#024a47" rx="2" />
@@ -218,25 +218,25 @@ export default function ApplianceRentalPage() {
   
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
-        {/* Header */}
+    
         <div className="bg-white shadow-sm">
           <div className="max-w-2xl mx-auto px-4 py-6">
-            {/* Logo */}
+          
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center mb-4">
                 <div className="relative">
-                  {/* House icon */}
+             
                   <svg width="80" height="60" viewBox="0 0 80 60" className="text-[#024a47]">
-                    {/* Chimney */}
+                 
                     <rect x="10" y="8" width="6" height="12" fill="#4a9b8e" />
-                    {/* House roof */}
+                   
                     <polygon points="40,5 70,25 10,25" fill="#024a47" />
-                    {/* House body */}
+                 
                     <rect x="15" y="25" width="50" height="30" fill="#4a9b8e" />
-                    {/* Appliances in house */}
+                   
                     <rect x="30" y="35" width="8" height="6" fill="white" stroke="#024a47" strokeWidth="1" />
                     <rect x="42" y="35" width="8" height="6" fill="white" stroke="#024a47" strokeWidth="1" />
-                    {/* Appliance details */}
+               
                     <circle cx="34" cy="38" r="2" fill="none" stroke="#024a47" strokeWidth="0.5" />
                     <circle cx="46" cy="38" r="2" fill="none" stroke="#024a47" strokeWidth="0.5" />
                   </svg>
@@ -248,7 +248,7 @@ export default function ApplianceRentalPage() {
           </div>
         </div>
   
-        {/* Main Content */}
+ 
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="max-w-4xl w-full">
             <h2 className="text-4xl font-bold text-[#024a47] text-center mb-12">
@@ -256,7 +256,7 @@ export default function ApplianceRentalPage() {
             </h2>
   
             <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-              {/* 3-Prong Option */}
+            
               <div className="bg-white rounded-2xl border-2 border-gray-200 p-8 text-center hover:shadow-lg transition-all duration-200">
                 <PlugIcon3Prong />
                 
@@ -271,7 +271,6 @@ export default function ApplianceRentalPage() {
                 </button>
               </div>
   
-              {/* 4-Prong Option */}
               <div className="bg-white rounded-2xl border-2 border-gray-200 p-8 text-center hover:shadow-lg transition-all duration-200">
                 <PlugIcon4Prong />
                 
@@ -287,7 +286,7 @@ export default function ApplianceRentalPage() {
               </div>
             </div>
   
-            {/* Selected State Display */}
+          
             {selectedPlugType && (
               <div className="mt-8 text-center">
                 <div className="inline-flex items-center bg-green-100 text-green-800 px-4 py-2 rounded-full">
@@ -353,7 +352,7 @@ export default function ApplianceRentalPage() {
     return (
       <div className="min-h-screen bg-[#f9faf5] p-4 sm:p-6 md:p-8">
         <div className="max-w-4xl mx-auto">
-          {/* Cart Header */}
+        
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Shopping Cart</h1>
             <button
@@ -380,7 +379,7 @@ export default function ApplianceRentalPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Cart Items */}
+             
               {cartItems.map((item) => (
                 <div key={item._id} className="bg-white rounded-2xl border border-gray-200 p-6 flex items-center justify-between">
                   <div className="flex items-center space-x-4">
@@ -401,7 +400,7 @@ export default function ApplianceRentalPage() {
                           <span>No features listed</span>
                         )}
                       </div>
-                      {/* Show plug type if it's a combo item */}
+                    
                       {item.comboItem && (
                         <div className="text-xs text-[#024a47] mt-1">
                           Plug type: {item.comboItem.plugDescription}
@@ -421,7 +420,7 @@ export default function ApplianceRentalPage() {
                 </div>
               ))}
 
-              {/* Cart Summary */}
+        
               <div className="bg-white rounded-2xl border border-gray-200 p-6">
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-lg font-semibold text-gray-900">Total Monthly Cost:</span>
@@ -459,21 +458,21 @@ export default function ApplianceRentalPage() {
           showComboPopup={showComboPopup} 
           setShowComboPopup={setShowComboPopup}
           selectedComboAppliance={selectedComboAppliance}
-          handlePlugTypeSelect={handlePlugTypeSelect} // Pass the function that handles API call
+          handlePlugTypeSelect={handlePlugTypeSelect} 
         />
       ) : (
         <div className="min-h-screen bg-[#f9faf5] p-4 sm:p-6 md:p-8">
           <div className="max-w-4xl mx-auto">
-            {/* Product Grid */}
+           
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6 mb-8">
               {appliances.map((appliance) => (
                 <div key={appliance._id} className="bg-white min-h-[30px] rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col min-h-[200px]">
-                  {/* Appliance Icon */}
+                
                   <div className="flex min-h-[100px] justify-center mb-6">
                     <img src={appliance?.photo} alt={appliance.name} />
                   </div>
 
-                  {/* Product Info */}
+                 
                   <div className="text-center mb-6">
                     <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
                       {appliance.name}
@@ -482,14 +481,13 @@ export default function ApplianceRentalPage() {
                       ${appliance.monthly_price}/mo
                     </p>
 
-                    {/* Combo Badge */}
+               
                     {appliance.combo && (
                       <div className="inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full mb-3">
                         COMBO SET
                       </div>
                     )}
 
-                    {/* Features */}
                     <div className="space-y-2 mb-4 relative">
                       {appliance.key_features && appliance.key_features.length > 0 ? (
                         appliance.key_features.map((feature, index) => (
@@ -505,7 +503,7 @@ export default function ApplianceRentalPage() {
                       )}
                     </div>
 
-                    {/* Stock Status */}
+                 
                     {appliance.stock_status === 'low' && (
                       <div className="flex absolute md:mx-[8%] mx-[25%] items-center justify-center text-gray-500 mb-4">
                         <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -516,7 +514,7 @@ export default function ApplianceRentalPage() {
                     )}
                   </div>
 
-                  {/* Select Button */}
+                
                   <button
                     onClick={() => handleSelect(appliance)}
                     className={`w-full py-3 px-6 rounded-lg font-semibold text-lg transition-colors ${
@@ -531,7 +529,7 @@ export default function ApplianceRentalPage() {
               ))}
             </div>
 
-            {/* Bottom Navigation/Action Bar */}
+           
             <div className="bg-[#024a47] rounded-2xl p-4 sm:p-6 text-center">
               <div className="flex flex-col sm:flex-row items-center justify-between">
                 <div className="text-white mb-4 sm:mb-0">

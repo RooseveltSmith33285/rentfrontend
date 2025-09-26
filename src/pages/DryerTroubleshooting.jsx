@@ -37,17 +37,17 @@ export default function DryerTroubleshooting() {
   const DryerIcon = () => (
     <div className="w-32 h-32 mx-auto mb-8">
       <div className="relative w-full h-full bg-white border-4 border-gray-700 rounded-lg">
-        {/* Control Panel */}
+       
         <div className="absolute top-2 left-2 right-2 h-6 bg-gray-100 border-b-2 border-gray-700 flex items-center">
           <div className="ml-2 w-8 h-2 bg-gray-400 rounded"></div>
           <div className="ml-auto mr-2 w-4 h-4 border-2 border-gray-600 rounded-full bg-gray-200"></div>
         </div>
         
-        {/* Door */}
+       
         <div className="absolute top-10 left-4 right-4 bottom-4 border-3 border-gray-700 rounded-full bg-gray-50">
-          {/* Inner drum */}
+        
           <div className="absolute top-2 left-2 right-2 bottom-2 border-2 border-gray-600 rounded-full bg-white">
-            {/* Door handle */}
+        
             <div className="absolute top-1/2 left-1 w-2 h-6 bg-gray-400 rounded transform -translate-y-1/2"></div>
           </div>
         </div>
@@ -63,7 +63,7 @@ export default function DryerTroubleshooting() {
 
   const FilterIcon = () => (
     <div className="w-8 h-8 border-2 border-gray-700 rounded bg-gray-100 relative">
-      {/* Lint dots pattern */}
+     
       <div className="absolute top-1 left-1 w-1 h-1 bg-gray-600 rounded-full"></div>
       <div className="absolute top-2 left-3 w-1 h-1 bg-gray-600 rounded-full"></div>
       <div className="absolute top-3 left-1 w-1 h-1 bg-gray-600 rounded-full"></div>
@@ -119,7 +119,7 @@ export default function DryerTroubleshooting() {
   return (
     <div className="min-h-screen bg-[#f0ece0] p-4 sm:p-6 md:p-8">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
+       
         <div className="bg-[#e26c44] text-[#efebe4] rounded-2xl py-8 px-6 mb-8">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center">
             DRYER<br />
@@ -127,25 +127,24 @@ export default function DryerTroubleshooting() {
           </h1>
         </div>
 
-        {/* Dryer Illustration */}
+     
         <DryerIcon />
 
-        {/* Divider Line */}
+      
         <div className="w-full h-1 bg-gray-400 mb-8"></div>
 
-        {/* Steps Section */}
         <div className="space-y-6">
           {troubleshootingSteps.map((step, index) => (
             <div key={step.step}>
               <div className="flex items-start gap-6">
-                {/* Step Number */}
+           
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-[#e26c44] text-white rounded-full flex items-center justify-center font-bold text-xl">
                     {step.step}
                   </div>
                 </div>
 
-                {/* Content */}
+           
                 <div className="flex-1">
                   <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
                     {step.title}
@@ -155,13 +154,12 @@ export default function DryerTroubleshooting() {
                   </p>
                 </div>
 
-                {/* Icon */}
                 <div className="flex-shrink-0 flex items-center justify-center w-12 h-12">
                   {getIcon(step.icon)}
                 </div>
               </div>
 
-              {/* Divider Line (except for last step) */}
+             
               {index < troubleshootingSteps.length - 1 && (
                 <div className="w-full h-px bg-gray-400 my-6"></div>
               )}

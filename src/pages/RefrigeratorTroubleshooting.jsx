@@ -109,7 +109,7 @@ export default function RefrigeratorTroubleshooting() {
 
   return (
     <div className="min-h-screen bg-[#f9f1e6]">
-      {/* Header */}
+      
       <div className="bg-[#f9f1e6] py-8 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-[#143d5f] leading-tight">
@@ -119,27 +119,27 @@ export default function RefrigeratorTroubleshooting() {
         </div>
       </div>
 
-      {/* Steps Section */}
+   
       <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 md:px-8">
         <div className="space-y-6">
           {troubleshootingSteps.map((step, index) => (
             <div key={step.step} className="bg-[#fefbf4] rounded-2xl p-6 shadow-sm">
               <div className="flex flex-col sm:flex-row items-center sm:items-center gap-6">
-                {/* Step Number */}
+              
                 <div className="flex-shrink-0">
                   <div className="w-16 h-16 bg-[#e88c4d] text-white rounded-full flex items-center justify-center font-bold text-2xl">
                     {step.step}
                   </div>
                 </div>
 
-                {/* Title */}
+                
                 <div className="flex-1 text-center sm:text-left">
                   <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-teal-800 leading-tight">
                     {step.title}
                   </h2>
                 </div>
 
-                {/* Icon */}
+             
                 <div className="flex-shrink-0 flex justify-center">
                   {getIcon(step.icon)}
                 </div>
@@ -149,7 +149,7 @@ export default function RefrigeratorTroubleshooting() {
         </div>
       </div>
 
-      {/* Bottom Section */}
+    
       <div className="bg-[#183d58] h-20 mt-12"></div>
     </div>
   );

@@ -11,10 +11,9 @@ export default function ConfirmSubmitPage() {
   return (
     <div className="min-h-screen bg-[#f3f4e6] flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl bg-white rounded-lg shadow-lg overflow-hidden mx-auto">
-        
-        {/* Header with curved background */}
+      
         <div className="relative bg-[#024a47] px-4 sm:px-6 md:px-8 pt-6 sm:pt-8 pb-12 sm:pb-16 text-center">
-          {/* Status bar mockup */}
+        
           <div className="flex justify-between items-center mb-4 text-white text-xs sm:text-sm font-medium">
             <span>11:28</span>
             <div className="flex items-center gap-1">
@@ -29,12 +28,12 @@ export default function ConfirmSubmitPage() {
             </div>
           </div>
 
-          {/* Back arrow */}
+       
           <div className="flex justify-start mb-4">
             <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6 text-white cursor-pointer" />
           </div>
 
-          {/* Logo and title */}
+       
           <div className="mb-4">
             <div className="inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-white rounded-lg mb-3">
               <Home className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-[#024a47]" />
@@ -43,23 +42,22 @@ export default function ConfirmSubmitPage() {
           <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white mb-1">RentSimple</h1>
           <p className="text-xs sm:text-sm md:text-base text-white opacity-90">Rent made simples</p>
 
-          {/* Curved bottom */}
+       
           <div className="absolute bottom-0 left-0 right-0 h-8 bg-[#f3f4e6] rounded-t-[2rem]"></div>
         </div>
 
-        {/* Content */}
+     
         <div className="px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8 -mt-4">
-          {/* Title */}
+        
           <div className="text-center mb-6 sm:mb-8">
             <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#024a47]">
               Confirm & Submit
             </h2>
           </div>
 
-          {/* Order Details */}
           <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 mb-4 sm:mb-6 shadow-sm">
             <div className="flex items-start gap-3 sm:gap-4">
-              {/* Product icon */}
+            
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#024a47] rounded-lg flex items-center justify-center flex-shrink-0">
                 <Home className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
@@ -80,7 +78,6 @@ export default function ConfirmSubmitPage() {
             </div>
           </div>
 
-          {/* Delivery Info */}
           <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 mb-4 sm:mb-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
@@ -93,10 +90,10 @@ export default function ConfirmSubmitPage() {
             </div>
           </div>
 
-          {/* Technician Info */}
+         
           <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 mb-6 sm:mb-8 shadow-sm">
             <div className="flex items-start gap-3 sm:gap-4">
-              {/* Avatar */}
+            
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-amber-600 rounded-full flex-shrink-0 overflow-hidden">
                 <div className="w-full h-full bg-gradient-to-br from-amber-400 to-amber-700 flex items-center justify-center">
                   <span className="text-white font-bold text-sm sm:text-base">J</span>
@@ -125,7 +122,7 @@ export default function ConfirmSubmitPage() {
             </div>
           </div>
 
-          {/* Confirm Button */}
+         
           <button 
             onClick={handleConfirmOrder}
             className="w-full bg-[#024a47] hover:bg-[#024a47] text-white font-bold py-3 sm:py-4 px-4 rounded-lg transition-colors text-base sm:text-lg lg:text-xl"

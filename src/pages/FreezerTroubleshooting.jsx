@@ -117,7 +117,7 @@ export default function FreezerTroubleshooting() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Header */}
+      
       <div className="bg-[#318391] text-white py-8 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold">
@@ -126,25 +126,25 @@ export default function FreezerTroubleshooting() {
         </div>
       </div>
 
-      {/* Steps Section */}
+  
       <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 md:px-8">
         <div className="space-y-8">
           {troubleshootingSteps.map((step, index) => (
             <div key={step.step}>
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-                {/* Step Number */}
+             
                 <div className="flex-shrink-0">
                   <div className="bg-[#318391] text-white px-6 py-3 rounded-tl-lg  font-bold text-xl w-32 text-center">
                     STEP {step.step}
                   </div>
                 </div>
 
-                {/* Icon */}
+              
                 <div className="flex-shrink-0 flex justify-center">
                   {getIcon(step.icon)}
                 </div>
 
-                {/* Title */}
+              
                 <div className="flex-1 text-center sm:text-left">
                   <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-teal-900 leading-tight">
                     {step.title}
@@ -152,7 +152,7 @@ export default function FreezerTroubleshooting() {
                 </div>
               </div>
 
-              {/* Arrow (except for last step) */}
+         
               {index < troubleshootingSteps.length - 1 && <ArrowIcon />}
             </div>
           ))}

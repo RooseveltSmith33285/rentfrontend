@@ -46,7 +46,7 @@ const DeepFreezerIcon = () => (
   </svg>
 );
 
-// Digital Signature Component
+
 const DigitalSignature = ({ onSignatureChange, signature, label }) => {
   const canvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -57,22 +57,22 @@ const DigitalSignature = ({ onSignatureChange, signature, label }) => {
 
     const ctx = canvas.getContext('2d');
     
-    // Set canvas size to container size
+    
     const container = canvas.parentElement;
     canvas.width = container.clientWidth;
     canvas.height = 120;
 
-    // Set drawing style
+  
     ctx.strokeStyle = '#024a47';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    // Clear canvas
+   
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Load existing signature
+   
     if (signature) {
       const img = new Image();
       img.onload = () => {
@@ -185,8 +185,7 @@ const DigitalSignature = ({ onSignatureChange, signature, label }) => {
     </div>
   );
 };
-// Agreement Modal Component
-// Agreement Modal Component
+
 const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -212,12 +211,13 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
 
   useEffect(() => {
     getUserData();
-    // Auto-generate lessor signature
+  
+    
     generateLessorSignature();
   }, []);
 
   const generateLessorSignature = () => {
-    // Create a simple text-based signature for the lessor
+   
     const canvas = document.createElement('canvas');
     canvas.width = 200;
     canvas.height = 60;
@@ -244,7 +244,7 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
       const urlParams = new URLSearchParams(window.location.search);
       const encodedData = urlParams.get('data');
 
-      // Simple URL decoding
+
       const decodedData = decodeURIComponent(encodedData);
       const data = JSON.parse(decodedData);
 
@@ -265,22 +265,22 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
   };
 
   const generateAgreementPDF = (signatureData, draftDay) => {
-    // Import jsPDF dynamically
+   
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
     script.onload = () => {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
       
-      // Set font
+     
       doc.setFont('helvetica');
       
-      // Title
+     
       doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
       doc.text('Rent-to-Own Agreement', 20, 25);
       
-      // Company info
+   
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
       doc.text('Company: Rent Simple', 20, 40);
@@ -289,7 +289,7 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
       
       let yPos = 65;
       
-      // Section 1: Parties
+     
       doc.setFont('helvetica', 'bold');
       doc.text('1. Parties', 20, yPos);
       yPos += 7;
@@ -300,8 +300,7 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
       yPos += 5;
       doc.text(`Lessee (Customer): ${signatureData.customerName}`, 30, yPos);
       yPos += 10;
-      
-      // Section 2: Items Covered
+    
       doc.setFont('helvetica', 'bold');
       doc.text('2. Items Covered', 20, yPos);
       yPos += 7;
@@ -315,7 +314,7 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
       });
       yPos += 5;
       
-      // Section 3: Payment Terms
+    
       doc.setFont('helvetica', 'bold');
       doc.text('3. Payment Terms', 20, yPos);
       yPos += 7;
@@ -328,7 +327,7 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
       doc.text(`Subsequent Payments: Due on the ${draftDay}${suffix} day of each month.`, 20, yPos);
       yPos += 10;
       
-      // Late Fee Schedule
+    
       doc.setFont('helvetica', 'bold');
       doc.text('Late Fee Schedule:', 20, yPos);
       yPos += 7;
@@ -340,13 +339,13 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
       });
       yPos += 10;
       
-      // Check if we need a new page
+     
       if (yPos > 250) {
         doc.addPage();
         yPos = 20;
       }
       
-      // Continue with other sections...
+   
       const sections = [
         {
           title: '4. Ownership',
@@ -396,17 +395,17 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
         yPos += 5;
       });
       
-      // Add new page for signatures
+    
       doc.addPage();
       yPos = 20;
       
-      // Digital Signatures Section
+    
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(14);
       doc.text('Digital Signatures', 20, yPos);
       yPos += 15;
       
-      // Customer signature
+    
       doc.setFontSize(12);
       doc.text('Customer Signature:', 20, yPos);
       yPos += 10;
@@ -426,7 +425,7 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
       doc.text(`Date: ${signatureData.signedDate}`, 20, yPos);
       yPos += 20;
       
-      // Lessor signature
+    
       doc.text('Lessor (Rent Simple) Signature:', 20, yPos);
       yPos += 10;
       
@@ -442,7 +441,7 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
       
       doc.text(`Date: ${signatureData.signedDate}`, 20, yPos);
       
-      // Schedule A: Pricing
+      
       yPos += 20;
       if (yPos > 250) {
         doc.addPage();
@@ -467,7 +466,7 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
         yPos += 5;
       });
       
-      // Save the PDF
+   
       const fileName = `Rent-to-Own-Agreement-${signatureData.customerName.replace(/\s+/g, '-')}-${new Date().getTime()}.pdf`;
       doc.save(fileName);
       
@@ -486,7 +485,7 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
         signedDate: currentDate
       };
       
-      // Generate PDF
+    
       generateAgreementPDF(signatureData, draftDay);
       
       onAccept(signatureData);
@@ -497,13 +496,13 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
 
   if (!isOpen) return null;
 
-  // Main landing view
+
   if (!showAgreementContent) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-2xl w-full max-w-2xl p-8">
           <div className="text-center space-y-8">
-            {/* Close button */}
+          
             <div className="flex justify-end">
               <button
                 onClick={onClose}
@@ -513,14 +512,14 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
               </button>
             </div>
 
-            {/* Title */}
+       
             <div className="space-y-4">
               <h1 className="text-6xl font-bold text-[#024a47] leading-tight">
                 Rental<br />Agreement
               </h1>
             </div>
 
-            {/* View Agreement Button */}
+           
             <button
               onClick={() => setShowAgreementContent(true)}
               className="w-full max-w-md mx-auto bg-[#024a47] text-white text-xl font-semibold py-4 px-8 rounded-2xl hover:bg-[#035d57] transition-colors"
@@ -528,7 +527,7 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
               View Agreement
             </button>
 
-            {/* Signature Section */}
+          
             <div className="space-y-6 max-w-md mx-auto">
               <div className="border-2 border-gray-300 rounded-2xl p-8 min-h-[200px] flex flex-col items-center justify-center">
                 {!hasCustomerSignature ? (
@@ -577,7 +576,7 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
                 )}
               </div>
 
-              {/* Submit Button */}
+             
               <button
                 onClick={handleAccept}
                 disabled={!hasCustomerSignature || !agreedToTerms}
@@ -590,7 +589,7 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
                 Submit
               </button>
 
-              {/* Terms Agreement Checkbox */}
+            
               <label className="flex items-start gap-3 cursor-pointer text-left">
                 <div 
                   className={`w-6 h-6 mt-0.5 rounded border-2 border-[#024a47] flex items-center justify-center flex-shrink-0 ${
@@ -611,11 +610,11 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
     );
   }
 
-  // Full agreement content view
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[95vh] flex flex-col">
-        {/* Header */}
+      
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <button
@@ -639,7 +638,7 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
           </button>
         </div>
 
-        {/* Agreement Content */}
+      
         <div 
           className="flex-1 overflow-y-auto p-6 text-sm leading-6"
           onScroll={handleScroll}
@@ -757,14 +756,13 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
           </div>
         </div>
 
-        {/* Scroll Indicator */}
         {!isScrolledToBottom && (
           <div className="px-6 py-2 bg-yellow-50 border-t border-yellow-200 text-center">
             <p className="text-sm text-yellow-700">Please scroll down to read the complete agreement</p>
           </div>
         )}
 
-        {/* Footer */}
+    
         <div className="p-6 border-t border-gray-200">
           <div className="flex gap-3 justify-between">
             <button
@@ -802,7 +800,7 @@ export default function BillingDetailsForm() {
   const elements = useElements();
   const navigate = useNavigate();
 
-  // Stripe Element styles
+ 
   const elementStyles = {
     style: {
       base: {
@@ -832,7 +830,6 @@ export default function BillingDetailsForm() {
       return false;
     }
 
-    // Get Stripe Elements
     const cardNumberElement = elements.getElement(CardNumberElement);
     const cardExpiryElement = elements.getElement(CardExpiryElement);
     const cardCvcElement = elements.getElement(CardCvcElement);
@@ -842,10 +839,9 @@ export default function BillingDetailsForm() {
       return false;
     }
 
-    // Check if card fields are complete
-    // Note: Stripe Elements don't have a validate() method, we need to check completeness differently
+   
     try {
-      // Create payment method to validate all fields at once
+      
       const { error } = await stripe.createPaymentMethod({
         type: 'card',
         card: cardNumberElement,
@@ -891,7 +887,7 @@ export default function BillingDetailsForm() {
       console.log('=== BILLING FORM SUBMISSION START ===');
       console.log('Timestamp:', new Date().toISOString());
       alert("Please wait until payment is processed click ok to continue")
-      // Create payment method with Stripe
+     
       const { error, paymentMethod } = await stripe.createPaymentMethod({
         type: 'card',
         card: elements.getElement(CardNumberElement),
@@ -908,7 +904,6 @@ export default function BillingDetailsForm() {
         return;
       }
 
-      // Prepare data for backend - ONLY send paymentMethodId, not raw card details
       const requestData = {
         paymentMethodId: paymentMethod.id,
         zipCode,
@@ -925,8 +920,7 @@ export default function BillingDetailsForm() {
       };
       
       console.log('Request data prepared with Stripe payment method:', requestData);
-      
-      // Send to backend
+    
       let token = localStorage.getItem("token");
       
       let response = await axios.post(`${BASE_URL}/storeBilling`, requestData, {
@@ -939,7 +933,7 @@ export default function BillingDetailsForm() {
       const urlParams = new URLSearchParams(window.location.search);
       const encodedData = urlParams.get('data');
   
-      // Simple URL decoding
+  
       const decodedData = decodeURIComponent(encodedData);
       const data = JSON.parse(decodedData);
 
@@ -975,7 +969,7 @@ export default function BillingDetailsForm() {
   return (
     <>
       <div className="max-w-md mx-auto p-8 bg-[#f9faf5] min-h-screen">
-        {/* Header */}
+    
         <div className="text-center mb-8">
           <div className="mb-4">
             <Lock className="w-16 h-16 text-[#024a47] mx-auto" />
@@ -983,7 +977,7 @@ export default function BillingDetailsForm() {
           <h1 className="text-3xl font-bold text-[#024a47]">Enter Billing Details</h1>
         </div>
 
-        {/* Card Number with Stripe Element */}
+       
         <div className="mb-6">
           <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
             <div className="flex items-center gap-3">
@@ -998,7 +992,7 @@ export default function BillingDetailsForm() {
           </div>
         </div>
 
-        {/* Expiry Date and CVV with Stripe Elements */}
+        
         <div className="mb-6 grid grid-cols-2 gap-4">
           <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
             <div className="flex items-center gap-3">
@@ -1024,7 +1018,7 @@ export default function BillingDetailsForm() {
           </div>
         </div>
 
-        {/* ZIP Code */}
+      
         <div className="mb-8">
           <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
             <div className="flex items-center gap-3">
@@ -1041,14 +1035,14 @@ export default function BillingDetailsForm() {
           </div>
         </div>
 
-        {/* Error Message */}
+    
         {cardError && (
           <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
             {cardError}
           </div>
         )}
 
-        {/* Draft Day Selection */}
+    
         <div className="mb-8">
           <h3 className="text-xl font-bold text-[#024a47] mb-4">Payment Draft Date</h3>
           <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
@@ -1076,7 +1070,7 @@ export default function BillingDetailsForm() {
           </p>
         </div>
 
-        {/* Appliance Icons */}
+       
         <div className="mb-8">
           <div className="flex justify-center gap-8 mb-6">
             <div className="text-center">
@@ -1094,7 +1088,7 @@ export default function BillingDetailsForm() {
           </div>
         </div>
 
-        {/* Save Card Checkbox */}
+       
         <div className="mb-8">
           <label className="flex items-center gap-3 cursor-pointer">
             <div 
@@ -1111,7 +1105,6 @@ export default function BillingDetailsForm() {
           </label>
         </div>
 
-        {/* Submit Button */}
         <button 
           onClick={handleSubmit}
           disabled={!stripe || isProcessing}
@@ -1122,7 +1115,7 @@ export default function BillingDetailsForm() {
           {isProcessing ? 'Processing...' : 'Complete Setup'}
         </button>
 
-        {/* Security Notice */}
+    
         <div className="mt-4 text-center text-sm text-gray-600">
           <div className="flex items-center justify-center gap-2">
             <Lock className="w-4 h-4" />
@@ -1131,7 +1124,7 @@ export default function BillingDetailsForm() {
         </div>
       </div>
 
-      {/* Agreement Modal */}
+   
       <AgreementModal
         isOpen={showAgreementModal}
         onClose={() => setShowAgreementModal(false)}

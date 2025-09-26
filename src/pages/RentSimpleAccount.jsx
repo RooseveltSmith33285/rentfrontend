@@ -16,13 +16,13 @@ export default function RentSimpleAccount() {
     user: {}
   });
 
-  // Stripe hooks
+
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
   const [cardError, setCardError] = useState('');
 
-  // Card styling
+ 
   const cardStyle = {
     style: {
       base: {
@@ -162,16 +162,16 @@ console.log(e.message)
 
   const downloadInvoice = async (order, item) => {
     try {
-      // Create new PDF document
+    
       const doc = new jsPDF();
       
-      // Set up colors and fonts
-      const primaryColor = '#0f766e'; // Teal-700
-      const textColor = '#374151'; // Gray-700
-      const lightGray = '#f3f4f6'; // Gray-100
+     
+      const primaryColor = '#0f766e';
+      const textColor = '#374151'; 
+      const lightGray = '#f3f4f6';
       
-      // Header
-      doc.setFillColor(15, 118, 110); // Teal background
+     
+      doc.setFillColor(15, 118, 110); 
       doc.rect(0, 0, 210, 40, 'F');
       
       doc.setTextColor(255, 255, 255);
@@ -179,7 +179,7 @@ console.log(e.message)
       doc.setFont('helvetica', 'bold');
       doc.text('INVOICE', 20, 25);
       
-      // Company info (you can customize this)
+      
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       doc.text('Your Company Name', 140, 15);
@@ -188,10 +188,10 @@ console.log(e.message)
       doc.text(`Phone: ${dashboardData?.user?.mobile}`, 140, 30);
       doc.text(`Email: ${dashboardData?.user?.email}`, 140, 35);
       
-      // Reset text color for body
+    
       doc.setTextColor(55, 65, 81);
       
-      // Invoice details
+     
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
       doc.text('Invoice Details', 20, 55);
@@ -204,7 +204,7 @@ console.log(e.message)
       doc.text(`Delivery Time: ${order.deliveryTime}`, 20, 80);
       doc.text(`Status: ${order?.status?.toUpperCase()}`, 20, 85);
       
-      // Delivery information
+     
       doc.setFont('helvetica', 'bold');
       doc.text('Delivery Information', 110, 65);
       
@@ -214,17 +214,17 @@ console.log(e.message)
         doc.text(`Coordinates: ${order.location.coordinates.join(', ')}`, 110, 75);
       }
       
-      // Line separator
+   
       doc.setDrawColor(229, 231, 235);
       doc.setLineWidth(0.5);
       doc.line(20, 95, 190, 95);
       
-      // Item details header
+    
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(12);
       doc.text('Item Details', 20, 110);
       
-      // Table header
+   
       doc.setFillColor(243, 244, 246);
       doc.rect(20, 115, 170, 10, 'F');
       
@@ -235,7 +235,7 @@ console.log(e.message)
       doc.text('Status', 140, 122);
       doc.text('Item ID', 160, 122);
       
-      // Item data
+     
       let yPos = 132;
       doc.setFont('helvetica', 'normal');
       doc.text(item.name || 'N/A', 25, yPos);
@@ -243,7 +243,7 @@ console.log(e.message)
       doc.text(item.stock_status || 'N/A', 140, yPos);
       doc.text(item._id.substring(0, 8) + '...', 160, yPos);
       
-      // Add item photo if available
+     
       if (item.photo) {
         try {
           doc.setFont('helvetica', 'italic');
@@ -254,7 +254,7 @@ console.log(e.message)
         }
       }
       
-      // Total section
+     
       yPos += 25;
       doc.setDrawColor(229, 231, 235);
       doc.line(120, yPos, 190, yPos);
@@ -264,7 +264,7 @@ console.log(e.message)
       doc.text('Total Amount:', 120, yPos + 10);
       doc.text(`$${item.monthly_price || '0'}`, 160, yPos + 10);
       
-      // Footer
+     
       yPos += 30;
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(8);
@@ -273,10 +273,10 @@ console.log(e.message)
       doc.text('For support, contact: support@company.com', 20, yPos + 5);
       doc.text(`Generated on: ${new Date().toLocaleString()}`, 20, yPos + 10);
       
-      // Generate filename
+     
       const fileName = `invoice_${order._id}_${item.name.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`;
       
-      // Save the PDF
+     
       doc.save(fileName);
       
       console.log('Invoice downloaded successfully');
@@ -448,7 +448,7 @@ toast.success("Billing unpaused sucessfully",{containerId:"dashboard"})
   <>
   <ToastContainer containerId={"dashboard"}/>
   <div className="min-h-screen bg-slate-50">
-      {/* Header */}
+    
       <div className="relative px-6 py-8 text-white bg-gradient-to-b from-teal-600 to-teal-700 shadow-lg shadow-teal-700/25">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between">
@@ -469,7 +469,7 @@ toast.success("Billing unpaused sucessfully",{containerId:"dashboard"})
       </div>
 
       <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 md:px-8">
-        {/* Account Details Card */}
+        
         <div className="bg-white border border-gray-200 rounded-2xl shadow-lg p-6 mb-6">
           <div className="flex flex-col lg:flex-row justify-between items-start gap-4 mb-4">
             <div>
@@ -500,7 +500,7 @@ toast.success("Billing unpaused sucessfully",{containerId:"dashboard"})
           </div>
         </div>
 
-        {/* Tabs */}
+     
         <div className="flex gap-4 my-6">
           <button 
             onClick={() => setActiveTab('current')}
@@ -524,7 +524,7 @@ toast.success("Billing unpaused sucessfully",{containerId:"dashboard"})
           </button>
         </div>
 
-        {/* Controls */}
+     
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <input 
             className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm"
@@ -534,7 +534,7 @@ toast.success("Billing unpaused sucessfully",{containerId:"dashboard"})
           />
         </div>
 
-        {/* Orders List */}
+       
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
           {activeTab === 'current' && 
           dashboardData?.orders?.filter(u => u?.status == "pending" || u?.status == "active")?.flatMap((order) => 
@@ -560,7 +560,7 @@ toast.success("Billing unpaused sucessfully",{containerId:"dashboard"})
           </div> : ''}
         </div>
 
-        {/* Billing Block */}
+        
         <div className="bg-white border border-gray-200 rounded-2xl shadow-lg p-6 mb-6">
           <div className="flex flex-col lg:flex-row justify-between items-start gap-4 mb-4">
             <div>
@@ -587,7 +587,7 @@ toast.success("Billing unpaused sucessfully",{containerId:"dashboard"})
           </div>
         </div>
 
-        {/* Invoices */}
+      
         <div className="bg-white border border-gray-200 rounded-2xl shadow-lg p-6 mb-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
             <div className="font-semibold text-slate-800 text-lg">Recent Invoices</div>
@@ -614,7 +614,7 @@ toast.success("Billing unpaused sucessfully",{containerId:"dashboard"})
           </div>
         </div>
 
-        {/* Danger Zone */}
+      
         <div className="bg-red-50 border border-dashed border-red-300 rounded-xl p-6">
           <div className="font-semibold text-slate-800 text-lg mb-2">Danger Zone</div>
           <div className="text-sm text-slate-500 mb-4">Pause billing or close your account. These actions can't be undone.</div>
@@ -629,7 +629,7 @@ toast.success("Billing unpaused sucessfully",{containerId:"dashboard"})
         </div>
       </div>
 
-      {/* Edit Billing Modal */}
+      
       {showEditModal && (
         <div className="fixed inset-0 bg-black/55 flex items-center justify-center p-4 z-50">
           <div className="w-full max-w-md bg-white rounded-2xl shadow-lg">

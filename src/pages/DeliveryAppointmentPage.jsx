@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 import { BASE_URL } from "../baseUrl";
 import { useNavigate } from "react-router-dom";
 
-// Mock data for fallback
+
 const mockCartItems = [
   {
     id: 1,
@@ -38,7 +38,7 @@ export default function IntegratedConfirmDeliveryPage() {
   const [totalCost, setTotalCost] = useState(0);
   const [mapError, setMapError] = useState("");
   
-  // Mapbox related states
+
   const mapContainer = useRef(null);
   const map = useRef(null);
   const [mapboxLoaded, setMapboxLoaded] = useState(false);
@@ -55,13 +55,11 @@ export default function IntegratedConfirmDeliveryPage() {
     "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM"
   ];
 
-  // Load cart items and orders on component mount
   useEffect(() => {
     getCartItems();
     verifyCalendar();
   }, []);
 
-  // Get user's current location
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -90,16 +88,15 @@ export default function IntegratedConfirmDeliveryPage() {
     }
   }, []);
 
-  // Load Mapbox GL JS
   useEffect(() => {
     if (!mapboxLoaded) {
-      // Load Mapbox CSS
+     
       const cssLink = document.createElement('link');
       cssLink.href = 'https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css';
       cssLink.rel = 'stylesheet';
       document.head.appendChild(cssLink);
 
-      // Load Mapbox JS
+   
       const script = document.createElement('script');
       script.src = 'https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js';
       script.onload = () => {
@@ -114,7 +111,6 @@ export default function IntegratedConfirmDeliveryPage() {
     }
   }, [mapboxLoaded]);
 
-  // Initialize map when Mapbox is loaded
   useEffect(() => {
     if (mapboxLoaded && mapContainer.current && !map.current && userLocation) {
       window.mapboxgl.accessToken = MAPBOX_TOKEN;
@@ -126,19 +122,18 @@ export default function IntegratedConfirmDeliveryPage() {
         zoom: 13
       });
 
-      // Add marker
       new window.mapboxgl.Marker({
         color: '#024a47'
       })
       .setLngLat([userLocation.lng, userLocation.lat])
       .addTo(map.current);
 
-      // Add navigation controls
+    
       map.current.addControl(new window.mapboxgl.NavigationControl());
     }
   }, [mapboxLoaded, userLocation]);
 
-  // Update map when location changes
+  
   useEffect(() => {
     if (map.current && userLocation) {
       map.current.flyTo({
@@ -146,11 +141,11 @@ export default function IntegratedConfirmDeliveryPage() {
         zoom: 13
       });
 
-      // Remove existing markers
+     
       const markers = document.querySelectorAll('.mapboxgl-marker');
       markers.forEach(marker => marker.remove());
 
-      // Add new marker
+     
       new window.mapboxgl.Marker({
         color: '#024a47'
       })
@@ -159,7 +154,7 @@ export default function IntegratedConfirmDeliveryPage() {
     }
   }, [userLocation]);
 
-  // Fetch cart items from API
+  
   const getCartItems = async () => {
     try {
       let token = localStorage.getItem('token');
@@ -172,14 +167,14 @@ export default function IntegratedConfirmDeliveryPage() {
       console.log("Cart items:", response.data.cartItems);
       setCartItems(response.data.cartItems?.items || mockCartItems);
       
-      // Calculate total cost
+    
       let totalCost = 0;
       if (response.data.cartItems?.items) {
         for (let i = 0; i < response.data.cartItems.items.length; i++) {
           totalCost += response.data.cartItems.items[i].monthly_price;
         }
       } else {
-        // Use mock data total if API fails
+     
         totalCost = mockCartItems.reduce((sum, item) => sum + item.monthly_price, 0);
       }
       setTotalCost(totalCost);
@@ -187,13 +182,13 @@ export default function IntegratedConfirmDeliveryPage() {
     } catch (e) {
       console.error("Error fetching cart items:", e.message);
       toast.error("Error loading cart items");
-      // Fallback to mock data
+     
       setCartItems(mockCartItems);
       setTotalCost(mockCartItems.reduce((sum, item) => sum + item.monthly_price, 0));
     }
   };
 
-  // Fetch calendar data from API
+
   const verifyCalendar = async () => {
     try {
       let token = localStorage.getItem('token');
@@ -212,7 +207,7 @@ export default function IntegratedConfirmDeliveryPage() {
     }
   };
 
-  // Reverse geocoding to get location name
+
   const reverseGeocode = async (location) => {
     try {
       const response = await fetch(
@@ -227,7 +222,7 @@ export default function IntegratedConfirmDeliveryPage() {
     }
   };
 
-  // Search for locations
+
   const searchLocation = async (query) => {
     if (!query.trim()) {
       setSearchResults([]);
@@ -255,40 +250,40 @@ export default function IntegratedConfirmDeliveryPage() {
     }
   };
 
-  // Debounce timer ref
+
   const searchTimeoutRef = useRef(null);
 
-  // Handle location input change
+
   const handleLocationInputChange = (e) => {
     const value = e.target.value;
     setLocationQuery(value);
     
-    // Clear previous timeout
+    
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
     
-    // Set new timeout for debounced search
+   
     searchTimeoutRef.current = setTimeout(() => {
       searchLocation(value);
     }, 300);
   };
 
-  // Handle Enter key press in search input
+
   const handleLocationInputKeyPress = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       if (searchResults.length > 0) {
-        // Select the first search result
+
         selectLocation(searchResults[0]);
       } else if (locationQuery.trim()) {
-        // Force search if no results are shown
+       
         searchLocation(locationQuery);
       }
     }
   };
 
-  // Select a location from search results
+ 
   const selectLocation = (feature) => {
     const [lng, lat] = feature.center;
     setUserLocation({ lat, lng });
@@ -377,7 +372,7 @@ export default function IntegratedConfirmDeliveryPage() {
         locationName: response.data.features[0]?.place_name || selectedLocationName
       };
   
-      // Simple URL encoding - no base64
+     
       const encodedData = encodeURIComponent(JSON.stringify(orderData));
       navigate(`/billing?data=${encodedData}`);
   
@@ -522,12 +517,12 @@ export default function IntegratedConfirmDeliveryPage() {
     </div>
   );
 
-  // Delivery Appointment View
+
   if (currentView === 'delivery') {
     return (
       <div className="min-h-screen bg-[#f3f4e6] flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl bg-white rounded-lg shadow-lg overflow-hidden mx-auto">
-          {/* Header */}
+      
           <div className="bg-white px-4 sm:px-6 md:px-8 pt-6 sm:pt-8 pb-4 sm:pb-6 text-center">
             <div className="flex justify-start mb-4">
               <ArrowLeft 
@@ -543,9 +538,9 @@ export default function IntegratedConfirmDeliveryPage() {
             <p className="text-sm sm:text-base md:text-lg lg:text-xl text-[#024a47]">Schedule your delivery</p>
           </div>
 
-          {/* Content Container */}
+      
           <div className="px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8">
-            {/* Location Search */}
+          
             <div className="mb-4 sm:mb-6">
               <div className="relative">
                 <div className="relative">
@@ -560,7 +555,7 @@ export default function IntegratedConfirmDeliveryPage() {
                   />
                 </div>
                 
-                {/* Search Results */}
+             
                 {showSearchResults && searchResults.length > 0 && (
                   <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto z-10">
                     {searchResults.map((feature, index) => (
@@ -579,7 +574,7 @@ export default function IntegratedConfirmDeliveryPage() {
               </div>
             </div>
 
-            {/* Selected Location Display */}
+           
             <div className="mb-4 sm:mb-6">
               <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
                 <div className="flex items-center gap-2 sm:gap-3">
@@ -591,7 +586,7 @@ export default function IntegratedConfirmDeliveryPage() {
               </div>
             </div>
 
-            {/* Map */}
+        
             {currentView === 'delivery'?<>
               <div className="mb-4 sm:mb-6">
               <div className="bg-gray-100 rounded-lg h-48 sm:h-56 md:h-64 relative overflow-hidden">
@@ -616,7 +611,7 @@ export default function IntegratedConfirmDeliveryPage() {
             </>:''}
            
 
-            {/* Selected Date Display */}
+          
             <div className="mb-3 sm:mb-4">
               <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
                 <div className="flex items-center gap-2 sm:gap-3">
@@ -626,7 +621,7 @@ export default function IntegratedConfirmDeliveryPage() {
               </div>
             </div>
 
-            {/* Selected Time Display */}
+       
             <div className="mb-3 sm:mb-4">
               <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
                 <div className="flex items-center gap-2 sm:gap-3">
@@ -636,7 +631,7 @@ export default function IntegratedConfirmDeliveryPage() {
               </div>
             </div>
 
-            {/* Delivery Info */}
+        
             <div className="mb-4 sm:mb-6">
               <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
                 <div className="flex items-center justify-between">
@@ -654,7 +649,7 @@ export default function IntegratedConfirmDeliveryPage() {
               </div>
             </div>
 
-            {/* Calendar and Time Selection */}
+            
             {showCalendar && (
               <div className="mb-4 sm:mb-6">
                 <CalendarComponent />
@@ -662,7 +657,7 @@ export default function IntegratedConfirmDeliveryPage() {
               </div>
             )}
 
-            {/* Schedule Button */}
+         
             <button 
               className="w-full bg-[#024a47] hover:bg-[#024a47] text-white font-semibold py-3 sm:py-4 px-4 rounded-lg transition-colors text-base sm:text-lg lg:text-xl"
               onClick={handleDeliveryScheduled}
@@ -675,7 +670,7 @@ export default function IntegratedConfirmDeliveryPage() {
     );
   }
 
-  // Confirm & Submit View
+
   return (
     <div className="min-h-screen bg-[#f3f4e6] flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl bg-white rounded-lg shadow-lg overflow-hidden mx-auto">
@@ -696,7 +691,7 @@ export default function IntegratedConfirmDeliveryPage() {
         </div>
 
         <div className="px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8">
-          {/* Order Details */}
+       
           {cartItems?.map((val, i) => (
             <div key={i} className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 mb-4 sm:mb-6 shadow-sm">
               <div className="flex items-start gap-3 sm:gap-4">
@@ -723,7 +718,7 @@ export default function IntegratedConfirmDeliveryPage() {
             <span className="text-gray-900 font-semibold text-lg">Total ${totalCost}/month</span>
           </div>
           
-          {/* Delivery Info */}
+        
           <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 mb-4 sm:mb-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
@@ -770,10 +765,10 @@ export default function IntegratedConfirmDeliveryPage() {
             )}
           </div>
 
-          {/* Technician Info */}
+       
           <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 mb-6 sm:mb-8 shadow-sm">
             <div className="flex items-start gap-3 sm:gap-4">
-              {/* Avatar */}
+           
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-amber-600 rounded-full flex-shrink-0 overflow-hidden">
                 <div className="w-full h-full bg-gradient-to-br from-amber-400 to-amber-700 flex items-center justify-center">
                   <img src={"./technican.jpg"} alt="Technician" className="w-full h-full object-cover"/>
@@ -803,7 +798,7 @@ export default function IntegratedConfirmDeliveryPage() {
             </div>
           </div>
 
-          {/* Confirm Button */}
+        
           <button 
             onClick={handleConfirmOrder}
             className={`w-full font-bold py-3 sm:py-4 px-4 rounded-lg transition-colors text-base sm:text-lg lg:text-xl ${

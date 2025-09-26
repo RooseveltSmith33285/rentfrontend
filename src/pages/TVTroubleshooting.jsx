@@ -68,27 +68,27 @@ export default function TVTroubleshooting() {
 
   return (
     <div className="max-w-lg mx-auto p-8 bg-[#ebf0f3] min-h-screen">
-      {/* Header */}
+   
       <div className="mb-12">
         <div className="bg-[#4482a9] rounded-2xl p-6 text-center shadow-lg">
           <h1 className="text-3xl font-bold text-white">TV Troubleshooting</h1>
         </div>
       </div>
 
-      {/* Troubleshooting Steps */}
+      
       <div className="space-y-8">
         {troubleshootingSteps.map((step, index) => (
           <div key={index} className="flex bg-white h-[8rem] px-6 items-center gap-6 rounded-2xl shadow-sm">
-            {/* Number Circle */}
+          
             <div className="flex-shrink-0 w-16 h-16 bg-[#4482a9] rounded-full flex items-center justify-center shadow-md">
               <span className="text-2xl font-bold text-white">{step.number}</span>
             </div>
             
-            {/* Title */}
+      
            {step.number==2 || step.number==4?<>
           
             
-            {/* Icon */}
+          
             <div className="flex-shrink-0">
               {step.icon}
             </div>
@@ -101,7 +101,7 @@ export default function TVTroubleshooting() {
               <h2 className="text-2xl font-medium text-gray-700">{step.title}</h2>
             </div>
             
-            {/* Icon */}
+      
             <div className="flex-shrink-0">
               {step.icon}
             </div>
