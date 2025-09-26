@@ -468,44 +468,44 @@ export default function ApplianceRentalPage() {
               {appliances.map((appliance) => (
                 <div key={appliance._id} className="bg-white min-h-[30px] rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col min-h-[200px]">
                 
-                  <div className="flex min-h-[100px] justify-center mb-6">
+                  <div className="flex min-h-[100px] max-h-[250px] justify-center mb-6">
                     <img src={appliance?.photo} alt={appliance.name} />
                   </div>
 
                  
-                  <div className="text-center mb-6">
-                    <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+                  <div className="text-center min-h-[30px] mb-6">
+                    <h3 className="text-xl min-h-[30px] sm:text-2xl font-bold text-gray-900 mb-2">
                       {appliance.name}
                     </h3>
-                    <p className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
+                    <p className="text-2xl sm:text-3xl min-h-[30px] font-bold text-gray-900 mb-4">
                       ${appliance.monthly_price}/mo
                     </p>
 
                
                     {appliance.combo && (
-                      <div className="inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full mb-3">
+                      <div className="inline-block min-h-[30px] bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full mb-3">
                         COMBO SET
                       </div>
                     )}
 
-                    <div className="space-y-2 mb-4 relative">
+                    <div className="space-y-2 min-h-[30px] mb-4 relative">
                       {appliance.key_features && appliance.key_features.length > 0 ? (
                         appliance.key_features.map((feature, index) => (
                           <div key={index} className="flex min-h-[30px] items-center justify-center text-gray-700">
-                            <div className="w-2 h-2 bg-[#024a47] rounded-full mr-3"></div>
-                            <span className="text-base sm:text-lg">{feature}</span>
+                            <div className="w-2 h-2 min-h-[30px] bg-[#024a47] rounded-full mr-3"></div>
+                            <span className="text-base min-h-[30px] sm:text-lg">{feature}</span>
                           </div>
                         ))
                       ) : (
                         <div className="flex min-h-[30px] items-center justify-center text-gray-500">
-                          <span className="text-base sm:text-lg">No features listed</span>
+                          <span className="text-base min-h-[30px] sm:text-lg">No features listed</span>
                         </div>
                       )}
                     </div>
 
                  
                     {appliance.stock_status === 'low' && (
-                      <div className="flex absolute md:mx-[8%] mx-[25%] items-center justify-center text-gray-500 mb-4">
+                      <div className="flex min-h-[30px] absolute md:mx-[8%] mx-[25%] items-center justify-center text-gray-500 mb-4">
                         <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -517,7 +517,7 @@ export default function ApplianceRentalPage() {
                 
                   <button
                     onClick={() => handleSelect(appliance)}
-                    className={`w-full py-3 px-6 rounded-lg font-semibold text-lg transition-colors ${
+                    className={`w-full min-h-[30px] py-3 px-6 rounded-lg font-semibold text-lg transition-colors ${
                       selectedAppliances.includes(appliance._id)
                         ? 'bg-[#024a47] text-white'
                         : 'bg-[#024a47] hover:bg-[#024a47] text-white'
@@ -530,7 +530,7 @@ export default function ApplianceRentalPage() {
             </div>
 
            
-            <div className="bg-[#024a47] rounded-2xl p-4 sm:p-6 text-center">
+            <div className="bg-[#024a47] min-h-[30px] rounded-2xl p-4 sm:p-6 text-center">
               <div className="flex flex-col sm:flex-row items-center justify-between">
                 <div className="text-white mb-4 sm:mb-0">
                   <span className="text-lg font-semibold">
