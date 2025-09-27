@@ -1,0 +1,626 @@
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { BASE_URL } from '../baseUrl';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import { 
+  Users, 
+  CreditCard, 
+  Package, 
+  BarChart3, 
+  Bell, 
+  Search, 
+  Filter, 
+  Edit, 
+  Trash2, 
+  Eye,
+  CheckCircle,
+  XCircle,
+  Clock,
+  DollarSign,
+  TrendingUp,
+  MapPin,
+  Calendar,
+  AlertTriangle,
+  MessageSquare,
+  Settings,
+  Menu,
+  X,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight
+} from 'lucide-react';
+import { toast, ToastContainer } from 'react-toastify';
+
+const Dashboard = () => {
+  const [dashboardData, setDashboardData] = useState({
+    users: [],
+    subscriptions: [],
+    products: [],
+    stats: {
+      totalUsers: 0,
+      activeSubscriptions: 0,
+      monthlyRevenue: 0,
+      availableInventory: 0
+    }
+  });
+  const [loading, setLoading] = useState(true);
+  const [recentActivity, setRecentActivity] = useState([]);
+  
+ 
+  const [activityPage, setActivityPage] = useState(1);
+  const [activityPagination, setActivityPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalSubscriptions: 0,
+    limit: 8,
+    hasNext: false,
+    hasPrev: false
+  });
+
+ 
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+
+  useEffect(() => {
+    fetchAllDashboardData();
+  }, [activityPage]);
+
+ 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchAllDashboardData();
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchAllDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+ 
+      const fetchPromises = [
+      
+        axios.get(`${BASE_URL}/getUsers?page=1&limit=1000`), 
+
+        axios.get(`${BASE_URL}/get-orders?page=${activityPage}&limit=${activityPagination.limit}`),
+       
+        axios.get(`${BASE_URL}/getProducts?page=1&limit=1000`)
+      ];
+
+      const [usersResponse, subscriptionsResponse, productsResponse] = await Promise.allSettled(fetchPromises);
+
+      let products = [];
+      let subscriptions = [];
+      let users = [];
+      let subscriptionPagination = {};
+
+    
+      if (productsResponse.status === 'fulfilled') {
+        products = productsResponse.value.data.products || [];
+      } else {
+        console.error('Failed to fetch products:', productsResponse.reason);
+        toast.error('Failed to load products data');
+      }
+
+     
+      if (subscriptionsResponse.status === 'fulfilled') {
+        const subscriptionData = subscriptionsResponse.value.data;
+        subscriptions = subscriptionData.orders || [];
+        subscriptionPagination = subscriptionData.pagination || {};
+      } else {
+        console.error('Failed to fetch subscriptions:', subscriptionsResponse.reason);
+        toast.error('Failed to load subscriptions data');
+      }
+
+     
+      if (usersResponse.status === 'fulfilled') {
+        const userData = usersResponse.value.data;
+        users = userData.users || [];
+      } else {
+        console.error('Failed to fetch users:', usersResponse.reason);
+        toast.error('Failed to load users data');
+      }
+
+      
+      const stats = await calculateStats(products, users);
+      
+      setDashboardData({
+        products,
+        subscriptions,
+        users,
+        stats
+      });
+
+   
+      setActivityPagination(prev => ({
+        ...prev,
+        ...subscriptionPagination
+      }));
+
+     
+      await generateRecentActivity(subscriptions, users);
+      
+      setLastRefresh(new Date());
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateStats = async (products, users) => {
+    try {
+     
+      const allSubscriptionsResponse = await axios.get(`${BASE_URL}/get-orders?page=1&limit=10000`);
+      const allSubscriptions = allSubscriptionsResponse.data.orders || [];
+
+    
+      const availableInventory = products.filter(product => 
+        product.stock_status === 'available'
+      ).length;
+
+      const rentedItems = products.filter(product => 
+        product.stock_status === 'rented'
+      ).length;
+
+      const maintenanceItems = products.filter(product => 
+        product.stock_status === 'maintenance'
+      ).length;
+
+  
+      const activeSubscriptions = allSubscriptions.filter(subscription => 
+        subscription.status === 'active'
+      ).length;
+
+      const pausedSubscriptions = allSubscriptions.filter(subscription => 
+        subscription.status === 'paused'
+      ).length;
+
+      const cancelledSubscriptions = allSubscriptions.filter(subscription => 
+        subscription.status === 'cancelled'
+      ).length;
+
+      
+      const monthlyRevenue = allSubscriptions
+        .filter(sub => sub.status === 'active')
+        .reduce((total, sub) => {
+          const itemsTotal = sub.items?.reduce((sum, item) => sum + (item.monthly_price || 0), 0) || 0;
+          const comboTotal = sub.comboItem?.reduce((sum, item) => sum + (item.monthly_price || 0), 0) || 0;
+          return total + itemsTotal + comboTotal;
+        }, 0);
+
+   
+      const totalUsers = users.length;
+      const activeUsers = users.filter(user => !user.billingPaused).length;
+      const suspendedUsers = users.filter(user => user.billingPaused).length;
+      const verifiedUsers = users.filter(user => user.verified === true).length;
+
+      return {
+   
+        totalUsers,
+        activeUsers,
+        suspendedUsers,
+        verifiedUsers,
+        
+   
+        totalSubscriptions: allSubscriptions.length,
+        activeSubscriptions,
+        pausedSubscriptions,
+        cancelledSubscriptions,
+        monthlyRevenue,
+        
+      
+        totalProducts: products.length,
+        availableInventory,
+        rentedItems,
+        maintenanceItems
+      };
+      
+    } catch (error) {
+      console.error('Error calculating comprehensive stats:', error);
+      
+      return {
+        totalUsers: users.length,
+        activeUsers: users.filter(user => !user.billingPaused).length,
+        suspendedUsers: users.filter(user => user.billingPaused).length,
+        verifiedUsers: users.filter(user => user.verified === true).length,
+        activeSubscriptions: 0,
+        monthlyRevenue: 0,
+        availableInventory: products.filter(product => product.stock_status === 'available').length,
+        totalProducts: products.length,
+        pausedSubscriptions: 0,
+        rentedItems: products.filter(product => product.stock_status === 'rented').length,
+        maintenanceItems: products.filter(product => product.stock_status === 'maintenance').length
+      };
+    }
+  };
+
+  const generateRecentActivity = async (subscriptions, users) => {
+  
+    const userMap = users.reduce((map, user) => {
+      map[user._id] = user;
+      return map;
+    }, {});
+
+   
+    const recent = subscriptions
+      .sort((a, b) => new Date(b.createdAt || b.deliveryDate) - new Date(a.createdAt || a.deliveryDate))
+      .map(sub => {
+        const user = userMap[sub.user];
+        return {
+          id: sub._id,
+          userId: sub.user,
+          userName: user ? (user.name || user.email || 'Unknown User') : 'Unknown User',
+          userEmail: user ? user.email : '',
+          status: sub.status,
+          deliveryDate: sub.deliveryDate,
+          createdAt: sub.createdAt,
+          itemCount: (sub.items?.length || 0) + (sub.comboItem?.length || 0),
+          monthlyTotal: (sub.items?.reduce((sum, item) => sum + (item.monthly_price || 0), 0) || 0) +
+                       (sub.comboItem?.reduce((sum, item) => sum + (item.monthly_price || 0), 0) || 0)
+        };
+      });
+    
+    setRecentActivity(recent);
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount);
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'active':
+        return 'bg-green-100 text-green-800';
+      case 'paused':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getChangePercentage = (current, category) => {
+    
+    const mockChanges = {
+      totalUsers: '+12%',
+      activeSubscriptions: '+8%',
+      monthlyRevenue: '+15%',
+      availableInventory: '-5%'
+    };
+    return mockChanges[category] || '+0%';
+  };
+
+  const handleRefresh = () => {
+    fetchAllDashboardData();
+    toast.success('Dashboard refreshed successfully');
+  };
+
+  const handleActivityPageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= activityPagination.totalPages) {
+      setActivityPage(newPage);
+    }
+  };
+
+  if (loading && recentActivity.length === 0) {
+    return (
+      <div className="p-6">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+        </div>
+      </div>
+    );
+  }
+
+  const statsCards = [
+    { 
+      title: 'Total Users', 
+      value: dashboardData.stats.totalUsers?.toLocaleString() || '0', 
+      change: getChangePercentage(dashboardData.stats.totalUsers, 'totalUsers'), 
+      icon: Users, 
+      color: 'bg-blue-500' 
+    },
+    { 
+      title: 'Active Subscriptions', 
+      value: dashboardData.stats.activeSubscriptions?.toLocaleString() || '0', 
+      change: getChangePercentage(dashboardData.stats.activeSubscriptions, 'activeSubscriptions'), 
+      icon: CreditCard, 
+      color: 'bg-green-500' 
+    },
+    { 
+      title: 'Monthly Revenue', 
+      value: formatCurrency(dashboardData.stats.monthlyRevenue || 0), 
+      change: getChangePercentage(dashboardData.stats.monthlyRevenue, 'monthlyRevenue'), 
+      icon: DollarSign, 
+      color: 'bg-purple-500' 
+    },
+    { 
+      title: 'Available Inventory', 
+      value: dashboardData.stats.availableInventory?.toLocaleString() || '0', 
+      change: getChangePercentage(dashboardData.stats.availableInventory, 'availableInventory'), 
+      icon: Package, 
+      color: 'bg-orange-500' 
+    }
+  ];
+
+  return (
+    <>
+      <ToastContainer containerId={"dashboard"} />
+      <div className="p-6">
+     
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Overview</h1>
+            <p className="text-gray-600">Welcome back! Here's what's happening with RentSimple today.</p>
+            <p className="text-sm text-gray-500 mt-1">
+              Last updated: {lastRefresh.toLocaleTimeString()}
+            </p>
+          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={loading}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
+          >
+            {loading ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Refresh
+          </button>
+        </div>
+
+       
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {statsCards.map((stat, index) => (
+            <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 relative">
+              {loading && (
+                <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+                </div>
+              )}
+              <div className="flex items-center justify-between mb-4">
+                <div className={`p-3 rounded-lg ${stat.color}`}>
+                  <stat.icon className="h-6 w-6 text-white" />
+                </div>
+                <span className={`text-sm font-medium ${stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
+                  {stat.change}
+                </span>
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900">{stat.value}</h3>
+                <p className="text-gray-600 text-sm">{stat.title}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+   
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Active Users</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {dashboardData.stats.activeUsers?.toLocaleString() || '0'}
+                </p>
+              </div>
+              <div className="p-3 bg-green-100 rounded-full">
+                <Users className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Verified Users</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {dashboardData.stats.verifiedUsers?.toLocaleString() || '0'}
+                </p>
+              </div>
+              <div className="p-3 bg-blue-100 rounded-full">
+                <CheckCircle className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Paused Subscriptions</p>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {dashboardData.stats.pausedSubscriptions?.toLocaleString() || '0'}
+                </p>
+              </div>
+              <div className="p-3 bg-yellow-100 rounded-full">
+                <Clock className="h-6 w-6 text-yellow-600" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Maintenance Items</p>
+                <p className="text-2xl font-bold text-red-600">
+                  {dashboardData.stats.maintenanceItems?.toLocaleString() || '0'}
+                </p>
+              </div>
+              <div className="p-3 bg-red-100 rounded-full">
+                <Settings className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+       
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+         
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Recent Subscription Orders</h2>
+              <div className="text-sm text-gray-500">
+                Page {activityPagination.currentPage} of {activityPagination.totalPages}
+              </div>
+            </div>
+            
+            <div className="max-h-96 overflow-y-auto space-y-4 relative">
+              {loading && (
+                <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                </div>
+              )}
+              
+              {recentActivity.length > 0 ? (
+                recentActivity.map(activity => (
+                  <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-gray-900">{activity.userName}</p>
+                      <p className="text-xs text-gray-500 truncate max-w-48">{activity.userEmail}</p>
+                      <p className="text-sm text-gray-600">
+                        {activity.itemCount} items - {formatCurrency(activity.monthlyTotal)}/month
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-500">
+                        {formatDate(activity.deliveryDate || activity.createdAt)}
+                      </p>
+                      <span className={`inline-flex px-2 py-1 text-xs rounded-full ${getStatusColor(activity.status)}`}>
+                        {activity.status}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-gray-500 py-8">
+                  <Package className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                  <p>No subscription orders found</p>
+                </div>
+              )}
+            </div>
+            
+        
+            {activityPagination.totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+                <div className="text-sm text-gray-500">
+                  {activityPagination.totalSubscriptions} total orders
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleActivityPageChange(activityPagination.currentPage - 1)}
+                    disabled={!activityPagination.hasPrev || loading}
+                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span className="text-sm text-gray-700">
+                    {activityPagination.currentPage} / {activityPagination.totalPages}
+                  </span>
+                  <button
+                    onClick={() => handleActivityPageChange(activityPagination.currentPage + 1)}
+                    disabled={!activityPagination.hasNext || loading}
+                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+        
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">System Status</h2>
+            <div className="space-y-4">
+              <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+                <div>
+                  <p className="text-sm font-medium text-green-800">All systems operational</p>
+                  <p className="text-xs text-green-600">
+                    Last updated: {lastRefresh.toLocaleTimeString()}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <Package className="h-5 w-5 text-blue-500 mr-3" />
+                <div>
+                  <p className="text-sm font-medium text-blue-800">
+                    {dashboardData.stats.totalProducts?.toLocaleString() || '0'} total products in inventory
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    {dashboardData.stats.availableInventory?.toLocaleString() || '0'} available for rent
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <Users className="h-5 w-5 text-gray-500 mr-3" />
+                <div>
+                  <p className="text-sm font-medium text-gray-800">
+                    {dashboardData.stats.totalUsers?.toLocaleString() || '0'} registered users
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    {dashboardData.stats.activeUsers?.toLocaleString() || '0'} active • {dashboardData.stats.verifiedUsers?.toLocaleString() || '0'} verified
+                    {dashboardData.stats.suspendedUsers > 0 && ` • ${dashboardData.stats.suspendedUsers.toLocaleString()} suspended`}
+                  </p>
+                </div>
+              </div>
+
+              {dashboardData.stats.pausedSubscriptions > 0 && (
+                <div className="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <Clock className="h-5 w-5 text-yellow-500 mr-3" />
+                  <div>
+                    <p className="text-sm font-medium text-yellow-800">
+                      {dashboardData.stats.pausedSubscriptions?.toLocaleString()} paused subscriptions
+                    </p>
+                    <p className="text-xs text-yellow-600">May need attention</p>
+                  </div>
+                </div>
+              )}
+
+              {dashboardData.stats.maintenanceItems > 0 && (
+                <div className="flex items-center p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                  <AlertTriangle className="h-5 w-5 text-orange-500 mr-3" />
+                  <div>
+                    <p className="text-sm font-medium text-orange-800">
+                      {dashboardData.stats.maintenanceItems?.toLocaleString()} items in maintenance
+                    </p>
+                    <p className="text-xs text-orange-600">Check maintenance schedule</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+      
+        <div className="mt-6 text-center text-sm text-gray-500">
+          <p>
+            Dashboard showing live data from {dashboardData.stats.totalUsers?.toLocaleString() || '0'} users, 
+            {' '}{dashboardData.stats.totalSubscriptions?.toLocaleString() || '0'} subscriptions, 
+            and {dashboardData.stats.totalProducts?.toLocaleString() || '0'} products
+          </p>
+          <p className="mt-1">Auto-refreshes every 5 minutes</p>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default Dashboard;

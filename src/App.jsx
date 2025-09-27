@@ -173,6 +173,11 @@ navigate('/appliance')
             </div>
 
             <div className="pt-3 sm:pt-4 pb-6 sm:pb-8">
+              <p onClick={()=>{
+navigate('/reset-password')
+              }} className='cursor-pointer'>
+                Reset Password
+              </p>
               <button
                 onClick={handleSubmit}
                 className="w-full cursor-pointer bg-[#024a47] hover:bg-[#024a47] text-white font-semibold py-3 sm:py-4 px-4 rounded-lg transition-colors text-base sm:text-lg lg:text-xl"

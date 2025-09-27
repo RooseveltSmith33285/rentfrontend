@@ -423,8 +423,13 @@ setDashboardData((prev)=>{
   return old;
 })
     }catch(e){
+      console.log(e)
       console.log(e.message)
+     if(e?.response?.data?.error){
+      toast.error(e?.response?.data?.error,{containerId:"dashboard"})
+     }else{
       toast.error("Error occured while pausing billing",{containerId:"dashboard"})
+     }
     }
   }
 
@@ -439,9 +444,26 @@ let response=await axios.post(`${BASE_URL}/resumeBilling`,{},{
 })
 
 toast.success("Billing unpaused sucessfully",{containerId:"dashboard"})
-    }catch(e){
+setDashboardData((prev)=>{
+  let old;
+  old={
+    ...prev,
+    user:{
+      ...prev?.user,
+      billingPaused:false
+    }
+  }
+
+  return old;
+})  
+}catch(e){
+      console.log(e)
       console.log(e.message)
-      toast.error("Error occured while unpausing billing",{containerId:"dashboard"})
+     if(e?.response?.data?.error){
+      toast.error(e?.response?.data?.error,{containerId:"dashboard"})
+     }else{
+      toast.error("Error occured while pausing billing",{containerId:"dashboard"})
+     }
     }
   }
   return (
@@ -619,7 +641,9 @@ toast.success("Billing unpaused sucessfully",{containerId:"dashboard"})
           <div className="font-semibold text-slate-800 text-lg mb-2">Danger Zone</div>
           <div className="text-sm text-slate-500 mb-4">Pause billing or close your account. These actions can't be undone.</div>
           <div className="flex flex-col sm:flex-row gap-3">
-            {dashboardData?.user?.billingPaused?<p>Your billing has been paused</p>:<button onClick={pauseBilling} className="bg-white text-teal-700 border border-teal-700 font-bold px-4 py-3 rounded-xl">
+            {dashboardData?.user?.billingPaused?<button onClick={UnpauseBilling} className="bg-white text-teal-700 border border-teal-700 font-bold px-4 py-3 rounded-xl">
+              Unpause Billing
+            </button>:<button onClick={pauseBilling} className="bg-white text-teal-700 border border-teal-700 font-bold px-4 py-3 rounded-xl">
               Pause Billing
             </button>}
             {/* <button className="bg-red-600 text-white font-bold px-4 py-3 rounded-xl">
