@@ -123,9 +123,9 @@ const Notifications = () => {
             </div>
           ) : (
             <div className="divide-y divide-gray-200">
-              {notifications.map(notification => (
+              {notifications?.map(notification => (
                 <div 
-                  key={notification.id} 
+                  key={notification?._id} 
                   className={`p-6 hover:bg-gray-50 transition-colors ${!notification.read ? 'bg-blue-50' : ''}`}
                 >
                   <div className="flex items-start space-x-4">
@@ -135,7 +135,9 @@ const Notifications = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <h3 className={`text-sm font-medium ${!notification.read ? 'text-gray-900' : 'text-gray-700'}`}>
-                          {notification.title}
+                        {notification?.items?.map((val,i)=>{
+                          return <p>{val?.name} was bought</p>
+                        })}
                         </h3>
                         <div className="flex items-center space-x-2">
                           <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
@@ -145,24 +147,15 @@ const Notifications = () => {
                               ? 'bg-yellow-100 text-yellow-800'
                               : 'bg-green-100 text-green-800'
                           }`}>
-                            {notification.priority}
+                           
                           </span>
-                          {!notification.read && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                          )}
+                          
                         </div>
                       </div>
                       <p className="text-sm text-gray-600 mb-2">{notification.message}</p>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-500">{notification.time}</span>
-                        {!notification.read && (
-                          <button 
-                            onClick={() => markAsRead(notification.id)}
-                            className="text-blue-600 hover:text-blue-800 text-xs"
-                          >
-                            Mark as read
-                          </button>
-                        )}
+                       
                       </div>
                     </div>
                   </div>
