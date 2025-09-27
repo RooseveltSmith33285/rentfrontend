@@ -82,7 +82,7 @@ import AdminAnalytics from './adminpages/Analytics.jsx'
 import AdminNotifications from './adminpages/Notifications.jsx'
 import Resetpassword from './pages/Resetpassword.jsx'
 
-const stripePromise = loadStripe('pk_test_51OwuO4LcfLzcwwOYdssgGfUSfOgWT1LwO6ewi3CEPewY7WEL9ATqH6WJm3oAcLDA3IgUvVYLVEBMIEu0d8fUwhlw009JwzEYmV');
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_SECRET);
 // const stripePromise = loadStripe('pk_live_51S9u6U3HVCo3dsX7aXyHuFn9FW8K5HU3re2Bm8GrhjgD2cmUlZC4QVpikr4q0l7Hr8v5W0Dniixb1rr6XEwYNDrQ009SkMpPse');
 
 
