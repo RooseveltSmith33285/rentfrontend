@@ -692,27 +692,41 @@ export default function IntegratedConfirmDeliveryPage() {
 
         <div className="px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8">
        
-          {cartItems?.map((val, i) => (
-            <div key={i} className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 mb-4 sm:mb-6 shadow-sm">
-              <div className="flex items-start gap-3 sm:gap-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#024a47] rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-                  <img src={val?.photo} alt={val?.name} className="w-full h-full object-cover rounded-lg" />
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h3 className="text-sm sm:text-base font-medium text-gray-600">Product</h3>
-                      <h4 className="text-base sm:text-lg font-bold text-gray-900">{val?.name}</h4>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between text-sm sm:text-base">
-                    <span className="text-gray-600">${val?.monthly_price}/month</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
+        {cartItems?.map((val, i) => (
+  <div key={i} className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 mb-4 sm:mb-6 shadow-sm">
+    <div className="flex items-start gap-3 sm:gap-4">
+      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#024a47] rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+        <img src={val?.photo} alt={val?.name} className="w-full h-full object-cover rounded-lg" />
+      </div>
+      
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between mb-2">
+          <div>
+            <h3 className="text-sm sm:text-base font-medium text-gray-600">Product</h3>
+            <h4 className="text-base sm:text-lg font-bold text-gray-900">{val?.name}</h4>
+          </div>
+        </div>
+        <div className="flex items-center justify-between text-sm sm:text-base">
+          <span className="text-gray-600">${val?.monthly_price}/month</span>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => navigate('/appliance')}
+              className="bg-[#024a47] hover:bg-green-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+            >
+              Add
+            </button>
+            <button 
+            onClick={() => navigate('/appliance')}
+              className="bg-red-400 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+))}
 
           <div className="mb-4 text-right">
             <span className="text-gray-900 font-semibold text-lg">Total ${totalCost}/month</span>
