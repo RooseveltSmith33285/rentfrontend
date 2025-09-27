@@ -469,7 +469,7 @@ export default function ApplianceRentalPage() {
                 <div key={appliance._id} className="bg-white min-h-[30px] rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col min-h-[200px]">
                 
                   <div className="flex min-h-[100px] max-h-[250px] justify-center mb-6">
-                    <img src={appliance?.photo} alt={appliance.name} />
+                    <img className='w-[8rem]' src={appliance?.photo} alt={appliance.name} />
                   </div>
 
                  
