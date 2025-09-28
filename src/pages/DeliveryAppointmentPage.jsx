@@ -369,6 +369,7 @@ export default function IntegratedConfirmDeliveryPage() {
         location: userLocation,
         deliveryDate: selectedDate,
         deliveryTime: selectedTime,
+        totalCost,
         locationName: response.data.features[0]?.place_name || selectedLocationName
       };
   
@@ -635,12 +636,15 @@ export default function IntegratedConfirmDeliveryPage() {
             <div className="mb-4 sm:mb-6">
               <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[#024a47] font-semibold text-sm sm:text-base lg:text-lg">Delivery time - Free</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[#024a47] w-[80%] font-semibold text-sm sm:text-base lg:text-lg">Delivery time - $25 flat fee for a single rental item
+
+Free for two or more rental items</span>
                     <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-[#024a47]" />
                   </div>
                   <button 
-                    className="text-[#024a47] font-semibold underline text-sm sm:text-base lg:text-lg"
+                  
+                    className="text-[#024a47] w-[50%] font-semibold underline text-sm sm:text-base lg:text-lg"
                     onClick={handleSeeMoreClick}
                   >
                     {showCalendar ? "See Less" : "See More"}
@@ -737,7 +741,11 @@ export default function IntegratedConfirmDeliveryPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm sm:text-base font-medium text-[#4a9b8e] mb-1">Delivery</h3>
-                <p className="text-xs sm:text-sm text-[#4a9b8e]">& install, fee free</p>
+                <p className="text-xs sm:text-sm text-[#4a9b8e]"><p>
+                Standard Delivery & Installation fee 
+	•	A $25 flat-rate delivery fee applies if the user selects only one rental item.
+	•	Delivery becomes free if the user selects two or more rental items.
+                  </p></p>
               </div>
               <div className="bg-[#024a47] text-white px-3 py-1 rounded-full">
                 <span className="text-xs sm:text-sm font-medium">Free</span>

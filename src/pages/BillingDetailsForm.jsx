@@ -319,7 +319,7 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
       doc.text('3. Payment Terms', 20, yPos);
       yPos += 7;
       doc.setFont('helvetica', 'normal');
-      doc.text('Rental Amount: $________ per month (see Schedule A for specific item pricing).', 20, yPos);
+      doc.text(`Rental Amount: $ ${totalCost} per month (see Schedule A for specific item pricing).`, 20, yPos);
       yPos += 5;
       doc.text('First Payment Due: Upon delivery of the item(s).', 20, yPos);
       yPos += 5;
@@ -677,7 +677,7 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
             <div className="border-t border-gray-300 pt-4">
               <h3 className="font-bold text-[#024a47] mb-3">3. Payment Terms</h3>
               <ul className="space-y-2">
-                <li><strong>Rental Amount:</strong> $________ per month (see Schedule A for specific item pricing).</li>
+                <li><strong>Rental Amount:</strong> ${customerData?.totalCost                } per month (see Schedule A for specific item pricing).</li>
                 <li><strong>First Payment Due:</strong> Upon delivery of the item(s).</li>
                 <li><strong>Subsequent Payments:</strong> Due on the {draftDay}{draftDay === 1 ? 'st' : draftDay === 2 ? 'nd' : draftDay === 3 ? 'rd' : 'th'} day of each month.</li>
               </ul>
@@ -740,7 +740,7 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
 
             <div className="border-t border-gray-300 pt-4">
               <h3 className="font-bold text-[#024a47] mb-3">10. Governing Law</h3>
-              <p>This Agreement is governed by the laws of the State of ______________.</p>
+              <p>This Agreement is governed by the laws of the State of INDIANA.</p>
             </div>
 
             <div className="border-t border-gray-300 pt-4">
@@ -945,7 +945,7 @@ export default function BillingDetailsForm() {
       
       alert(`Success: ${response.data.message}`);
       setShowAgreementModal(false);
-      navigate('/dashboard');
+      navigate('/confirmation');
       
     } catch (e) {
       console.error('=== ERROR IN BILLING FORM SUBMISSION ===');
@@ -1028,7 +1028,7 @@ export default function BillingDetailsForm() {
                 value={zipCode}
                 onChange={handleZipCodeChange}
                 className="flex-1 text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
-                placeholder="12345"
+                placeholder="Zip code"
                 maxLength="5"
               />
             </div>

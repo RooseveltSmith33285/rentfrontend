@@ -81,6 +81,7 @@ import AdminInventoryManagement from './adminpages/Inventorymanagement.jsx'
 import AdminAnalytics from './adminpages/Analytics.jsx'
 import AdminNotifications from './adminpages/Notifications.jsx'
 import Resetpassword from './pages/Resetpassword.jsx'
+import OrderConfirmation from './pages/Orderconfirmation.jsx'
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_SECRET);
 // const stripePromise = loadStripe('pk_live_51S9u6U3HVCo3dsX7aXyHuFn9FW8K5HU3re2Bm8GrhjgD2cmUlZC4QVpikr4q0l7Hr8v5W0Dniixb1rr6XEwYNDrQ009SkMpPse');
@@ -105,6 +106,7 @@ createRoot(document.getElementById('root')).render(
           <Route path="/confirm" element={<ConfirmSubmitPage />} /> 
           <Route path='/dashboard' element={<RentSimpleAccount/>}/>
 <Route path='/reset-password' element={<Resetpassword/>}></Route>
+<Route path='/confirmation' element={<OrderConfirmation/>}/>
         
           <Route path="/admin/*" element={<AdminApp />}>
             <Route index element={<AdminDashboard />} />
