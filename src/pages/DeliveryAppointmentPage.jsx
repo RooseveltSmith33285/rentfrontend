@@ -36,6 +36,7 @@ export default function IntegratedConfirmDeliveryPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
   const [totalCost, setTotalCost] = useState(0);
+  const [selectedTvSize,setSelectedTvSize]=useState(0)
   const [mapError, setMapError] = useState("");
   
 
@@ -165,6 +166,7 @@ export default function IntegratedConfirmDeliveryPage() {
       });
 
       console.log("Cart items:", response.data.cartItems);
+      setSelectedTvSize(response?.data?.cartItems?.tvSize)
       setCartItems(response.data.cartItems?.items || mockCartItems);
       
     
@@ -176,6 +178,10 @@ export default function IntegratedConfirmDeliveryPage() {
       } else {
      
         totalCost = mockCartItems.reduce((sum, item) => sum + item.monthly_price, 0);
+      }
+      if(response.data.cartItems?.items?.find(u=>u?.name?.toLowerCase().includes("tv"))){
+        console.log("CALLED")
+        totalCost=(totalCost+parseInt(response?.data?.cartItems?.tvSize))-1
       }
       setTotalCost(totalCost);
 
@@ -370,7 +376,8 @@ export default function IntegratedConfirmDeliveryPage() {
         deliveryDate: selectedDate,
         deliveryTime: selectedTime,
         totalCost,
-        locationName: response.data.features[0]?.place_name || selectedLocationName
+        locationName: response.data.features[0]?.place_name || selectedLocationName,
+      
       };
   
      
@@ -711,7 +718,7 @@ Free for two or more rental items</span>
           </div>
         </div>
         <div className="flex items-center justify-between text-sm sm:text-base">
-          <span className="text-gray-600">${val?.monthly_price}/month</span>
+          <span className="text-gray-600">${val?.name?.match(/tv/i)?(val.monthly_price*parseInt(selectedTvSize)):val.monthly_price}/mo</span>
           <div className="flex gap-2">
             <button 
               onClick={() => navigate('/appliance')}

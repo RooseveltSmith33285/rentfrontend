@@ -14,13 +14,20 @@ export default function ApplianceRentalPage() {
   const [showComboPopup, setShowComboPopup] = useState(false);
   const [selectedComboAppliance, setSelectedComboAppliance] = useState(null);
   const [selectedPlugType, setSelectedPlugType] = useState('');
+  const [selectedTvSize,setSelectedTvSize]=useState(0)
   const navigate = useNavigate();
 
   const handleSelect = async (appliance) => {
     try {
       let token = localStorage.getItem('token');
       
-     
+      // Check if it's a TV appliance
+      if (appliance.name.toLowerCase().includes('tv') && !selectedAppliances.includes(appliance._id)) {
+        setSelectedComboAppliance(appliance);
+        setShowComboPopup(true);
+        return; 
+      }
+      
       if (appliance.combo === true && !selectedAppliances.includes(appliance._id)) {
         setSelectedComboAppliance(appliance);
         setShowComboPopup(true);
@@ -28,7 +35,6 @@ export default function ApplianceRentalPage() {
       }
       
       if (selectedAppliances.includes(appliance._id)) {
-      
         await axios.delete(`${BASE_URL}/removeFromCart`, {
           data: { applianceId: appliance._id },
           headers: {
@@ -36,11 +42,9 @@ export default function ApplianceRentalPage() {
           }
         });
       } else {
-       
         await addToCart(appliance);
       }
       
-    
       await fetchCartItems();
       
     } catch(e) {
@@ -49,12 +53,17 @@ export default function ApplianceRentalPage() {
     }
   };
 
-  const addToCart = async (appliance, plugType = null) => {
+  const addToCart = async (appliance, plugType = null, tvSize = null) => {
     try {
       let token = localStorage.getItem('token');
       let payload = { applianceId: appliance._id };
       
-    
+      // Handle TV size selection
+      if (appliance.name.toLowerCase().includes('tv') && tvSize) {
+        payload.tvSize = tvSize;
+      }
+      
+      // Handle combo appliance (dryer with plug type)
       if (appliance.combo === true && plugType) {
         payload.comboItem = {
           plugType: plugType,
@@ -80,7 +89,12 @@ export default function ApplianceRentalPage() {
       setSelectedPlugType(plugType);
       
       if (selectedComboAppliance) {
-        await addToCart(selectedComboAppliance, plugType);
+        // Check if it's a TV or a combo appliance
+        if (selectedComboAppliance.name.toLowerCase().includes('tv')) {
+          await addToCart(selectedComboAppliance, null, plugType);
+        } else {
+          await addToCart(selectedComboAppliance, plugType);
+        }
         await fetchCartItems(); 
       }
       
@@ -89,7 +103,7 @@ export default function ApplianceRentalPage() {
       setSelectedPlugType('');
       
     } catch(e) {
-      console.error('Error adding combo appliance to cart:', e);
+      console.error('Error adding appliance to cart:', e);
       toast.error('Error adding appliance to cart');
     }
   };
@@ -109,13 +123,14 @@ export default function ApplianceRentalPage() {
           Authorization: `Bearer ${token}`
         }
       });
-      
+console.log("CARTITEMS")
+      console.log(response.data)
+      setSelectedTvSize(response?.data?.cartItems?.tvSize)
       const items = response.data.cartItems.items || [];
       console.log("CART ITEMS:", items);
       
       setCartItems(items);
       
-    
       const idsOnly = items.map(val => val._id);
       setSelectedAppliances(prev => {
         if (prev.length !== idsOnly.length || !idsOnly.every(id => prev.includes(id))) {
@@ -143,9 +158,16 @@ export default function ApplianceRentalPage() {
   };
 
   const getTotalPrice = () => {
-    return cartItems.reduce((total, item) => {
+    let total=cartItems.reduce((total, item) => {
       return total + parseInt(item.monthly_price);
     }, 0);
+
+  
+    if(cartItems?.find(u=>u?.name?.toLowerCase().includes("tv"))){
+      console.log("CALLED")
+      total=(total+parseInt(selectedTvSize))-1
+    }
+    return total
   };
 
   useEffect(() => {
@@ -169,26 +191,46 @@ export default function ApplianceRentalPage() {
     }
   }
 
-
   const ComboPopup = ({showComboPopup, selectedPlugType, setShowComboPopup, setSelectedPlugType, selectedComboAppliance, handlePlugTypeSelect}) => {
-   
+    const isTV = selectedComboAppliance?.name.toLowerCase().includes('tv');
+    
+    const tvSizes = [
+      { size: '40"', price: 40, note: 'Entry-level size for bedrooms, dorm rooms, small apartments' },
+      { size: '43"', price: 43, note: 'Popular budget-friendly living-room option' },
+      { size: '50"', price: 50, note: 'Very common mid-range size for living rooms' },
+      { size: '55"', price: 55, note: 'One of the top-selling mainstream sizes for households' },
+      { size: '60"', price: 60, note: 'Preferred for larger living rooms or family spaces' },
+      { size: '65"', price: 65, note: 'Fast-growing favorite for home-entertainment setups' },
+      { size: '70"', price: 70, note: 'Big-screen experience for movie and sports fans' },
+      { size: '75"', price: 75, note: 'Premium choice; often requested for home theaters' },
+      { size: '80"', price: 80, note: 'Upper-end for most renters; ideal for large rooms or event viewing' }
+    ];
+
     const handlePlugSelect = (plugType) => {
-     
       handlePlugTypeSelect(plugType);
+     
     };
+
+    const handleTvSize=async(tvSize)=>{
+     handlePlugSelect(tvSize)
+     const cleanSize = tvSize.replace('"', '');
+     setSelectedTvSize(cleanSize)
+try{
+  let token=localStorage.getItem('token')
+let response=await axios.patch(`${BASE_URL}/updateTvscreen`,{tvSize:cleanSize},{
+  headers:{
+    Authorization:`Bearer ${token}`
+  }
+})
+}catch(e){
+
+}
+    }
   
     const PlugIcon3Prong = () => (
       <div className="w-24 h-24 mx-auto mb-4">
         <svg viewBox="0 0 100 100" className="w-full h-full">
-          <circle 
-            cx="50" 
-            cy="50" 
-            r="45" 
-            fill="none" 
-            stroke="#024a47" 
-            strokeWidth="3"
-          />
-         
+          <circle cx="50" cy="50" r="45" fill="none" stroke="#024a47" strokeWidth="3"/>
           <line x1="35" y1="25" x2="45" y2="35" stroke="#024a47" strokeWidth="4" strokeLinecap="round" />
           <line x1="65" y1="25" x2="55" y2="35" stroke="#024a47" strokeWidth="4" strokeLinecap="round" />
           <line x1="50" y1="60" x2="50" y2="75" stroke="#024a47" strokeWidth="4" strokeLinecap="round" />
@@ -199,15 +241,7 @@ export default function ApplianceRentalPage() {
     const PlugIcon4Prong = () => (
       <div className="w-24 h-24 mx-auto mb-4">
         <svg viewBox="0 0 100 100" className="w-full h-full">
-          <circle 
-            cx="50" 
-            cy="50" 
-            r="45" 
-            fill="none" 
-            stroke="#024a47" 
-            strokeWidth="3"
-          />
-      
+          <circle cx="50" cy="50" r="45" fill="none" stroke="#024a47" strokeWidth="3"/>
           <rect x="35" y="25" width="4" height="15" fill="#024a47" rx="2" />
           <rect x="48" y="25" width="4" height="15" fill="#024a47" rx="2" />
           <rect x="61" y="25" width="4" height="15" fill="#024a47" rx="2" />
@@ -218,25 +252,17 @@ export default function ApplianceRentalPage() {
   
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
-    
         <div className="bg-white shadow-sm">
           <div className="max-w-2xl mx-auto px-4 py-6">
-          
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center mb-4">
                 <div className="relative">
-             
                   <svg width="80" height="60" viewBox="0 0 80 60" className="text-[#024a47]">
-                 
                     <rect x="10" y="8" width="6" height="12" fill="#4a9b8e" />
-                   
                     <polygon points="40,5 70,25 10,25" fill="#024a47" />
-                 
                     <rect x="15" y="25" width="50" height="30" fill="#4a9b8e" />
-                   
                     <rect x="30" y="35" width="8" height="6" fill="white" stroke="#024a47" strokeWidth="1" />
                     <rect x="42" y="35" width="8" height="6" fill="white" stroke="#024a47" strokeWidth="1" />
-               
                     <circle cx="34" cy="38" r="2" fill="none" stroke="#024a47" strokeWidth="0.5" />
                     <circle cx="46" cy="38" r="2" fill="none" stroke="#024a47" strokeWidth="0.5" />
                   </svg>
@@ -248,54 +274,76 @@ export default function ApplianceRentalPage() {
           </div>
         </div>
   
- 
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="max-w-4xl w-full">
-            <h2 className="text-4xl font-bold text-[#024a47] text-center mb-12">
-              Select Dryer Plug Type
-            </h2>
-  
-            <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-            
-              <div className="bg-white rounded-2xl border-2 border-gray-200 p-8 text-center hover:shadow-lg transition-all duration-200">
-                <PlugIcon3Prong />
+            {isTV ? (
+              <>
+                <h2 className="text-4xl font-bold text-[#024a47] text-center mb-4">
+                  Select TV Size
+                </h2>
+                <p className="text-center text-gray-600 mb-8">Choose the perfect screen size for your space</p>
                 
-                <h3 className="text-3xl font-bold text-[#024a47] mb-2">3-Prong</h3>
-                <p className="text-xl text-gray-600 mb-8">220V • USA Homes</p>
-                
-                <button
-                  onClick={() => handlePlugSelect('3-prong')}
-                  className="w-full bg-[#024a47] hover:bg-[#035d59] text-white font-bold py-4 px-8 rounded-xl text-lg transition-colors duration-200 transform hover:scale-105"
-                >
-                  Select
-                </button>
-              </div>
-  
-              <div className="bg-white rounded-2xl border-2 border-gray-200 p-8 text-center hover:shadow-lg transition-all duration-200">
-                <PlugIcon4Prong />
-                
-                <h3 className="text-3xl font-bold text-[#024a47] mb-2">4-Prong</h3>
-                <p className="text-xl text-gray-600 mb-8">220V • USA Homes</p>
-                
-                <button
-                  onClick={() => handlePlugSelect('4-prong')}
-                  className="w-full bg-[#024a47] hover:bg-[#035d59] text-white font-bold py-4 px-8 rounded-xl text-lg transition-colors duration-200 transform hover:scale-105"
-                >
-                  Select
-                </button>
-              </div>
-            </div>
-  
-          
-            {selectedPlugType && (
-              <div className="mt-8 text-center">
-                <div className="inline-flex items-center bg-green-100 text-green-800 px-4 py-2 rounded-full">
-                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  Selected: {selectedPlugType} plug type
+                <div className="grid gap-4 max-w-3xl mx-auto">
+                  {tvSizes.map((tv) => (
+                    <div key={tv.size} className="bg-white rounded-xl border-2 border-gray-200 p-6 hover:shadow-lg transition-all duration-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="text-center min-w-[60px]">
+                            <div className="text-3xl font-bold text-[#024a47]">{tv.size}</div>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-gray-700 text-sm">{tv.note}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <div className="text-right mr-4">
+                            <div className="text-2xl font-bold text-[#024a47]">${tv.price}</div>
+                            <div className="text-sm text-gray-500">/month</div>
+                          </div>
+                          <button
+                            onClick={() => handleTvSize(tv.size)}
+                            className="bg-[#024a47] hover:bg-[#035d59] text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200"
+                          >
+                            Select
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              </>
+            ) : (
+              <>
+                <h2 className="text-4xl font-bold text-[#024a47] text-center mb-12">
+                  Select Dryer Plug Type
+                </h2>
+  
+                <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+                  <div className="bg-white rounded-2xl border-2 border-gray-200 p-8 text-center hover:shadow-lg transition-all duration-200">
+                    <PlugIcon3Prong />
+                    <h3 className="text-3xl font-bold text-[#024a47] mb-2">3-Prong</h3>
+                    <p className="text-xl text-gray-600 mb-8">220V • USA Homes</p>
+                    <button
+                      onClick={() => handlePlugSelect('3-prong')}
+                      className="w-full bg-[#024a47] hover:bg-[#035d59] text-white font-bold py-4 px-8 rounded-xl text-lg transition-colors duration-200 transform hover:scale-105"
+                    >
+                      Select
+                    </button>
+                  </div>
+  
+                  <div className="bg-white rounded-2xl border-2 border-gray-200 p-8 text-center hover:shadow-lg transition-all duration-200">
+                    <PlugIcon4Prong />
+                    <h3 className="text-3xl font-bold text-[#024a47] mb-2">4-Prong</h3>
+                    <p className="text-xl text-gray-600 mb-8">220V • USA Homes</p>
+                    <button
+                      onClick={() => handlePlugSelect('4-prong')}
+                      className="w-full bg-[#024a47] hover:bg-[#035d59] text-white font-bold py-4 px-8 rounded-xl text-lg transition-colors duration-200 transform hover:scale-105"
+                    >
+                      Select
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -352,15 +400,9 @@ export default function ApplianceRentalPage() {
     return (
       <div className="min-h-screen bg-[#f9faf5] p-4 sm:p-6 md:p-8">
         <div className="max-w-4xl mx-auto">
-        
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Shopping Cart</h1>
-            <button
-              onClick={handleCloseCart}
-              className="text-gray-500 hover:text-gray-700 text-2xl"
-            >
-              ×
-            </button>
+            <button onClick={handleCloseCart} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
           </div>
 
           {loadingCart ? (
@@ -370,16 +412,12 @@ export default function ApplianceRentalPage() {
           ) : cartItems.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
               <p className="text-gray-500 text-lg">Your cart is empty</p>
-              <button
-                onClick={handleCloseCart}
-                className="mt-4 bg-[#024a47] hover:bg-[#024a47] text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-              >
+              <button onClick={handleCloseCart} className="mt-4 bg-[#024a47] hover:bg-[#024a47] text-white px-6 py-3 rounded-lg font-semibold transition-colors">
                 Continue Shopping
               </button>
             </div>
           ) : (
             <div className="space-y-4">
-             
               {cartItems.map((item) => (
                 <div key={item._id} className="bg-white rounded-2xl border border-gray-200 p-6 flex items-center justify-between">
                   <div className="flex items-center space-x-4">
@@ -400,42 +438,37 @@ export default function ApplianceRentalPage() {
                           <span>No features listed</span>
                         )}
                       </div>
-                    
                       {item.comboItem && (
                         <div className="text-xs text-[#024a47] mt-1">
                           Plug type: {item.comboItem.plugDescription}
                         </div>
                       )}
+                      {item.tvSize && (
+                        <div className="text-xs text-[#024a47] mt-1">
+                          TV Size: {item.tvSize}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center space-x-4">
-                    <span className="text-xl font-bold text-gray-900">${item.monthly_price}/mo</span>
-                    <button
-                      onClick={() => handleSelect(item)}
-                      className="text-red-500 hover:text-red-700 text-sm font-semibold"
-                    >
+                    <span className="text-xl font-bold text-gray-900">${item?.name?.match(/tv/i)?(item.monthly_price*parseInt(selectedTvSize)):item.monthly_price}/mo</span>
+                    <button onClick={() => handleSelect(item)} className="text-red-500 hover:text-red-700 text-sm font-semibold">
                       Remove
                     </button>
                   </div>
                 </div>
               ))}
 
-        
               <div className="bg-white rounded-2xl border border-gray-200 p-6">
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-lg font-semibold text-gray-900">Total Monthly Cost:</span>
                   <span className="text-2xl font-bold text-[#024a47]">${getTotalPrice()}/mo</span>
                 </div>
                 <div className="flex space-x-4">
-                  <button
-                    onClick={handleCloseCart}
-                    className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 px-6 rounded-lg font-semibold transition-colors"
-                  >
+                  <button onClick={handleCloseCart} className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 px-6 rounded-lg font-semibold transition-colors">
                     Continue Shopping
                   </button>
-                  <button onClick={(e) => {
-                    navigate('/delivery')
-                  }} className="flex-1 bg-[#024a47] hover:bg-[#024a47] text-white py-3 px-6 rounded-lg font-semibold transition-colors">
+                  <button onClick={() => navigate('/delivery')} className="flex-1 bg-[#024a47] hover:bg-[#024a47] text-white py-3 px-6 rounded-lg font-semibold transition-colors">
                     Proceed to Checkout
                   </button>
                 </div>
@@ -450,7 +483,6 @@ export default function ApplianceRentalPage() {
   return (
     <>
       <ToastContainer containerId={"productsPage"} />
-   
       {showComboPopup ? (
         <ComboPopup 
           selectedPlugType={selectedPlugType} 
@@ -463,49 +495,44 @@ export default function ApplianceRentalPage() {
       ) : (
         <div className="min-h-screen bg-[#f9faf5] p-4 sm:p-6 md:p-8">
           <div className="max-w-4xl mx-auto">
-           
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6 mb-8">
               {appliances.map((appliance) => (
-                <div key={appliance._id} className="bg-white min-h-[30px] rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col min-h-[200px]">
-                
+                <div key={appliance._id} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col">
                   <div className="flex min-h-[100px] max-h-[250px] justify-center mb-6">
                     <img className='w-[8rem]' src={appliance?.photo} alt={appliance.name} />
                   </div>
 
-                 
-                  <div className="text-center min-h-[30px] mb-6">
-                    <h3 className="text-xl min-h-[30px] sm:text-2xl font-bold text-gray-900 mb-2">
+                  <div className="text-center mb-6">
+                    <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
                       {appliance.name}
                     </h3>
-                    <p className="text-2xl sm:text-3xl min-h-[30px] font-bold text-gray-900 mb-4">
+                    <p className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
                       ${appliance.monthly_price}/mo
                     </p>
 
-               
                     {appliance.combo && (
-                      <div className="inline-block min-h-[30px] bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full mb-3">
+                      <div className="inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full mb-3">
                         COMBO SET
                       </div>
                     )}
 
-                    <div className="space-y-2 min-h-[30px] mb-4 relative">
+                    <div className="space-y-2 mb-4">
                       {appliance.key_features && appliance.key_features.length > 0 ? (
                         appliance.key_features.map((feature, index) => (
-                          <div key={index} className="flex min-h-[30px] items-center justify-center text-gray-700">
-                            <div className="w-2 h-2 min-h-[30px] bg-[#024a47] rounded-full mr-3"></div>
-                            <span className="text-base min-h-[30px] sm:text-lg">{feature}</span>
+                          <div key={index} className="flex items-center justify-center text-gray-700">
+                            <div className="w-2 h-2 bg-[#024a47] rounded-full mr-3"></div>
+                            <span className="text-base sm:text-lg">{feature}</span>
                           </div>
                         ))
                       ) : (
-                        <div className="flex min-h-[30px] items-center justify-center text-gray-500">
-                          <span className="text-base min-h-[30px] sm:text-lg">No features listed</span>
+                        <div className="flex items-center justify-center text-gray-500">
+                          <span className="text-base sm:text-lg">No features listed</span>
                         </div>
                       )}
                     </div>
 
-                 
                     {appliance.stock_status === 'low' && (
-                      <div className="flex min-h-[30px] absolute md:mx-[8%] mx-[25%] items-center justify-center text-gray-500 mb-4">
+                      <div className="flex items-center justify-center text-gray-500 mb-4">
                         <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -514,10 +541,9 @@ export default function ApplianceRentalPage() {
                     )}
                   </div>
 
-                
                   <button
                     onClick={() => handleSelect(appliance)}
-                    className={`w-full min-h-[30px] py-3 px-6 rounded-lg font-semibold text-lg transition-colors ${
+                    className={`w-full py-3 px-6 rounded-lg font-semibold text-lg transition-colors ${
                       selectedAppliances.includes(appliance._id)
                         ? 'bg-[#024a47] text-white'
                         : 'bg-[#024a47] hover:bg-[#024a47] text-white'
@@ -529,8 +555,7 @@ export default function ApplianceRentalPage() {
               ))}
             </div>
 
-           
-            <div className="bg-[#024a47] min-h-[30px] rounded-2xl p-4 sm:p-6 text-center">
+            <div className="bg-[#024a47] rounded-2xl p-4 sm:p-6 text-center">
               <div className="flex flex-col sm:flex-row items-center justify-between">
                 <div className="text-white mb-4 sm:mb-0">
                   <span className="text-lg font-semibold">
@@ -539,16 +564,11 @@ export default function ApplianceRentalPage() {
                 </div>
                 
                 <div className="flex space-x-4">
-                  <button 
-                    onClick={handleViewCart}
-                    className="bg-white text-[#024a47] px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
-                  >
+                  <button onClick={handleViewCart} className="bg-white text-[#024a47] px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
                     View Cart
                   </button>
                   <button 
-                    onClick={() => {
-                      navigate('/delivery')
-                    }}
+                    onClick={() => navigate('/delivery')}
                     className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
                       selectedAppliances.length > 0
                         ? 'bg-[#024a47] text-white hover:bg-[#024a47]'
