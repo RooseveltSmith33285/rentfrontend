@@ -39,9 +39,7 @@ totalPrice=val?.monthly_price+totalPrice
 setTotalCost(totalPrice)
 toast.dismiss();
 toast.success("Order placed sucessfully",{containerId:"confirmationPage"})
-setTimeout(()=>{
-navigate('/dashboard')
-},2700)
+
     }catch(e){
 console.log(e.message)
     }
@@ -74,6 +72,11 @@ console.log(e.message)
             Order Confirmation
           </h2>
 
+          <p className="text-1xl font-bold text-teal-800 text-center mb-8">
+          Please save this page or take a screenshot for your records and confirmation.
+
+          </p>
+        
           <div className="space-y-6">
            
             <div>

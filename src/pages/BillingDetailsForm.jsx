@@ -319,7 +319,7 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
       doc.text('3. Payment Terms', 20, yPos);
       yPos += 7;
       doc.setFont('helvetica', 'normal');
-      doc.text(`Rental Amount: $ ${totalCost} per month (see Schedule A for specific item pricing).`, 20, yPos);
+      doc.text(`Rental Amount: $ ${customerData?.totalCost} per month (see Schedule A for specific item pricing).`, 20, yPos);
       yPos += 5;
       doc.text('First Payment Due: Upon delivery of the item(s).', 20, yPos);
       yPos += 5;
@@ -677,7 +677,7 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
             <div className="border-t border-gray-300 pt-4">
               <h3 className="font-bold text-[#024a47] mb-3">3. Payment Terms</h3>
               <ul className="space-y-2">
-                <li><strong>Rental Amount:</strong> ${customerData?.totalCost                } per month (see Schedule A for specific item pricing).</li>
+                <li><strong>Rental Amount:</strong> ${customerData?.totalCost} per month (see Schedule A for specific item pricing).</li>
                 <li><strong>First Payment Due:</strong> Upon delivery of the item(s).</li>
                 <li><strong>Subsequent Payments:</strong> Due on the {draftDay}{draftDay === 1 ? 'st' : draftDay === 2 ? 'nd' : draftDay === 3 ? 'rd' : 'th'} day of each month.</li>
               </ul>
@@ -795,7 +795,14 @@ export default function BillingDetailsForm() {
   const [showAgreementModal, setShowAgreementModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [cardError, setCardError] = useState(null);
+  const [cardState,setCard]=useState({
+    card:'',
+    cvc:'',
+    zip:'',
+    expirey:''
+  })
 
+  
   const stripe = useStripe();
   const elements = useElements();
   const navigate = useNavigate();
@@ -822,114 +829,31 @@ export default function BillingDetailsForm() {
     }
   };
 
-  const validateForm = async () => {
-    setCardError(null);
-    
-    if (!stripe || !elements) {
-      setCardError("Stripe not loaded yet. Please wait...");
-      return false;
-    }
-
-    const cardNumberElement = elements.getElement(CardNumberElement);
-    const cardExpiryElement = elements.getElement(CardExpiryElement);
-    const cardCvcElement = elements.getElement(CardCvcElement);
-
-    if (!cardNumberElement || !cardExpiryElement || !cardCvcElement) {
-      setCardError("Payment fields not loaded properly");
-      return false;
-    }
-
-   
-    try {
-      
-      const { error } = await stripe.createPaymentMethod({
-        type: 'card',
-        card: cardNumberElement,
-        billing_details: {
-          address: {
-            postal_code: zipCode,
-          },
-        },
-      });
-
-      if (error) {
-        setCardError(error.message);
-        return false;
-      }
-
-      if (zipCode.length === 0) {
-        alert("Please enter zip code");
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      setCardError("Error validating card details");
-      return false;
-    }
-  };
 
   const handleSubmit = async () => {
     setIsProcessing(true);
-    const isValid = await validateForm();
     
-    if (isValid) {
+  
       setShowAgreementModal(true);
-    }
+
     
     setIsProcessing(false);
   };
 
   const handleAgreementAccept = async (signatureData) => {
     try {
-      setIsProcessing(true);
-      
-      console.log('=== BILLING FORM SUBMISSION START ===');
-      console.log('Timestamp:', new Date().toISOString());
-      alert("Please wait until payment is processed click ok to continue")
-     
-      const { error, paymentMethod } = await stripe.createPaymentMethod({
-        type: 'card',
-        card: elements.getElement(CardNumberElement),
-        billing_details: {
-          address: {
-            postal_code: zipCode,
-          },
-        },
-      });
-
-      if (error) {
-        setCardError(error.message);
-        setIsProcessing(false);
-        return;
-      }
-
-      const requestData = {
-        paymentMethodId: paymentMethod.id,
-        zipCode,
-        draftDay,
-        saveCard,
-        agreement: {
-          customerName: signatureData.customerName,
-          customerSignature: signatureData.customerSignature,
-          lessorSignature: signatureData.lessorSignature,
-          signedDate: signatureData.signedDate,
-          agreementVersion: '1.0',
-          signatureTimestamp: new Date().toISOString()
-        }
-      };
-      
-      console.log('Request data prepared with Stripe payment method:', requestData);
     
       let token = localStorage.getItem("token");
       
-      let response = await axios.post(`${BASE_URL}/storeBilling`, requestData, {
+      let response = await axios.post(`${BASE_URL}/storeBilling`, {cardState,draftDay}, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
       
+
+     
       const urlParams = new URLSearchParams(window.location.search);
       const encodedData = urlParams.get('data');
   
@@ -943,7 +867,7 @@ export default function BillingDetailsForm() {
       }})
       console.log('Backend response received:', response.data);
       
-      alert(`Success: ${response.data.message}`);
+      alert(`We are working on your order. Thank you for trusting Rent Simple Deals!`);
       setShowAgreementModal(false);
       navigate('/confirmation');
       
@@ -983,8 +907,16 @@ export default function BillingDetailsForm() {
             <div className="flex items-center gap-3">
               <CreditCard className="w-6 h-6 text-[#024a47]" />
               <div className="flex-1">
-                <CardNumberElement
-                  options={elementStyles}
+                <input type="text"
+                placeholder="Card Number"
+                    onChange={(e)=>{
+                     setCard({
+                      ...cardState,
+                      card:e.target.value
+                     })
+                     }}
+                     value={cardState.card}
+
                   className="w-full text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
                 />
               </div>
@@ -998,8 +930,15 @@ export default function BillingDetailsForm() {
             <div className="flex items-center gap-3">
               <Calendar className="w-6 h-6 text-[#024a47]" />
               <div className="flex-1">
-                <CardExpiryElement
-                  options={elementStyles}
+                <input
+                 placeholder="Card Expiray"
+                      onChange={(e)=>{
+                  setCard({
+                    ...cardState,
+                    expirey:e.target.value
+                  })
+                 }}
+                 value={cardState.expirey}
                   className="w-full text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
                 />
               </div>
@@ -1009,8 +948,15 @@ export default function BillingDetailsForm() {
             <div className="flex items-center gap-3">
               <MoreHorizontal className="w-6 h-6 text-[#024a47]" />
               <div className="flex-1">
-                <CardCvcElement
-                  options={elementStyles}
+                <input type="text"
+                 placeholder="CVC"
+                       onChange={(e)=>{
+                        setCard({
+                          ...cardState,
+                          cvc:e.target.value
+                        })
+                       }}
+                       value={cardState.cvc}
                   className="w-full text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
                 />
               </div>
@@ -1036,11 +982,7 @@ export default function BillingDetailsForm() {
         </div>
 
     
-        {cardError && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-            {cardError}
-          </div>
-        )}
+     
 
     
         <div className="mb-8">
