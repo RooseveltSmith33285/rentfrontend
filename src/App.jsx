@@ -50,6 +50,7 @@ console.log(response.data)
 toast.dismiss(); 
 toast.success(response.data.message,{containerId:"authPage"})
 localStorage.setItem("token",response.data.token)
+localStorage.removeItem('cartItems')
 navigate('/appliance')
    }catch(e){
     console.log(e)

@@ -137,45 +137,24 @@ export default function ApplianceRentalPage() {
   const syncCartWithAPI = async () => {
     try {
       const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+  
       
-      
-      await axios.patch(`${BASE_URL}/removeItemsFromCart`,{},{
-        headers:{
-          Authorization:`Bearer ${token}`
-        }
-      })
-      // Add all items to cart
-      for (const item of cartItems) {
-        const payload = { applianceId: item._id };
-
-        if (item.tvSize) {
-          payload.tvSize = item.tvSize;
-        }
-
-        if (item.comboItem) {
-          payload.comboItem = item.comboItem;
-        }
-
-        await axios.post(`${BASE_URL}/addItemsToCart`, payload, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-          
-        });
-      }
-
-      // Update TV size if exists
+      const apiCalls = [
+        axios.post(`${BASE_URL}/addItemsToCart`, { cartItems }, { headers })
+      ];
+  
       if (selectedTvSize) {
-        await axios.patch(`${BASE_URL}/updateTvscreen`, 
-          { tvSize: selectedTvSize },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }
+        apiCalls.push(
+          axios.patch(`${BASE_URL}/updateTvscreen`, 
+            { tvSize: selectedTvSize },
+            { headers }
+          )
         );
       }
-
+  
+      await Promise.all(apiCalls);
+  
       return true;
     } catch (e) {
       console.error('Error syncing cart with API:', e);

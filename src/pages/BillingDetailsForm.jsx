@@ -875,32 +875,35 @@ export default function BillingDetailsForm() {
 
   const handleAgreementAccept = async (signatureData) => {
     try {
-    
-      let token = localStorage.getItem("token");
-      
-      let response = await axios.post(`${BASE_URL}/storeBilling`, {cardState,draftDay}, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-
-     
+      const token = localStorage.getItem("token");
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+  
+      // Parse URL data once
       const urlParams = new URLSearchParams(window.location.search);
       const encodedData = urlParams.get('data');
+      const orderData = JSON.parse(decodeURIComponent(encodedData));
   
+      // Execute both API calls in parallel
+      const [billingResponse, orderResponse] = await Promise.all([
+        axios.post(`${BASE_URL}/storeBilling`, 
+          { cardState, draftDay }, 
+          { headers }
+        ),
+        axios.post(`${BASE_URL}/createOrder`, 
+          orderData, 
+          { headers }
+        )
+      ]);
   
-      const decodedData = decodeURIComponent(encodedData);
-      const data = JSON.parse(decodedData);
-
+      console.log('Backend responses received:', { 
+        billing: billingResponse.data,
+        order: orderResponse.data 
+      });
       
-       let responsetwo=await axios.post(`${BASE_URL}/createOrder`,data,{headers:{
-        Authorization:`Bearer ${token}`
-      }})
-      console.log('Backend response received:', response.data);
-      
-      alert(`We are working on your order. Thank you for trusting Rent Simple Deals!`);
+      alert('We are working on your order. Thank you for trusting Rent Simple Deals!');
       setShowAgreementModal(false);
       navigate('/confirmation');
       
@@ -909,15 +912,15 @@ export default function BillingDetailsForm() {
       console.error('Error timestamp:', new Date().toISOString());
       console.error('Error object:', e);
       
-      if (e?.response?.data?.error) {
-        alert(`Error: ${e.response.data.error}`);
-      } else if (e?.response) {
-        alert('Server error occurred. Please check the console for details.');
-      } else if (e?.request) {
-        alert('Network error. Please check your internet connection.');
-      } else {
-        alert('An unexpected error occurred. Please try again.');
-      }
+      const errorMessage = e?.response?.data?.error 
+        ? `Error: ${e.response.data.error}`
+        : e?.response 
+          ? 'Server error occurred. Please check the console for details.'
+          : e?.request 
+            ? 'Network error. Please check your internet connection.'
+            : 'An unexpected error occurred. Please try again.';
+      
+      alert(errorMessage);
     } finally {
       setIsProcessing(false);
     }
