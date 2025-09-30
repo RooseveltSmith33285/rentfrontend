@@ -525,120 +525,120 @@ console.log(e.message)
 
   if (!showAgreementContent) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-2xl w-full max-w-2xl p-8">
-          <div className="text-center space-y-8">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div className="bg-white rounded-2xl w-full max-w-2xl p-6 my-4">
+        <div className="space-y-6">
           
-            <div className="flex justify-end">
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-6 h-6 text-gray-500" />
-              </button>
-            </div>
-
-       
-            <div className="space-y-4">
-              <h1 className="text-6xl font-bold text-[#024a47] leading-tight">
-                Rental<br />Agreement
-              </h1>
-            </div>
-
-           
-           <div className="flex flex-col gap-[1rem]">
-
-           <button
+          {/* Close Button */}
+          <div className="flex justify-end">
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+    
+          {/* Title */}
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-[#024a47] leading-tight">
+              Rental Agreement
+            </h1>
+          </div>
+    
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto">
+            <button
               onClick={() => setShowAgreementContent(true)}
-              className="w-full max-w-md mx-auto bg-[#024a47] text-white text-xl font-semibold py-4 px-8 rounded-2xl hover:bg-[#035d57] transition-colors"
+              className="flex-1 bg-[#024a47] text-white font-semibold py-3 px-6 rounded-xl hover:bg-[#035d57] transition-colors"
             >
               View Agreement
             </button>
-
-<button className="w-full max-w-md mx-auto bg-[#024a47] text-white text-xl font-semibold py-4 px-8 rounded-2xl hover:bg-[#035d57] transition-colors" onClick={download}>
-  Download Agreement
-</button>
-           </div>
-          
-            <div className="space-y-6 max-w-md mx-auto">
-              <div className="border-2 border-gray-300 rounded-2xl p-8 min-h-[200px] flex flex-col items-center justify-center">
-                {!hasCustomerSignature ? (
-                  <div className="text-center space-y-4 w-full">
-                    <p className="text-gray-400 text-lg">Signature</p>
-                    <div className="space-y-4">
-                      <input
-                        type="text"
-                        value={customerData?.name || ''}
-                        disabled={true}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg text-center bg-gray-50"
-                        placeholder="Your name"
-                      />
-                      <div className="w-full">
-                        <DigitalSignature
-                          onSignatureChange={handleCustomerSignatureChange}
-                          signature={customerSignature}
-                          label="Sign here"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center space-y-4 w-full">
-                    <p className="text-[#024a47] font-semibold">Signed by:</p>
-                    <p className="text-lg">{customerData?.name}</p>
-                    <div className="border rounded-lg p-4 bg-gray-50">
-                      {customerSignature && (
-                        <img 
-                          src={customerSignature} 
-                          alt="Customer Signature" 
-                          className="max-w-full h-16 mx-auto"
-                        />
-                      )}
-                    </div>
-                    <button
-                      onClick={() => {
-                        setCustomerSignature('');
-                        setHasCustomerSignature(false);
-                      }}
-                      className="text-sm text-gray-500 underline hover:text-gray-700"
-                    >
-                      Clear signature
-                    </button>
-                  </div>
-                )}
-              </div>
-
-             
-              <button
-                onClick={handleAccept}
-                disabled={!hasCustomerSignature || !agreedToTerms}
-                className={`w-full text-xl font-semibold py-4 px-8 rounded-2xl transition-colors ${
-                  hasCustomerSignature && agreedToTerms
-                    ? 'bg-[#024a47] text-white hover:bg-[#035d57]'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                Submit
-              </button>
-
-            
-              <label className="flex items-start gap-3 cursor-pointer text-left">
-                <div 
-                  className={`w-6 h-6 mt-0.5 rounded border-2 border-[#024a47] flex items-center justify-center flex-shrink-0 ${
-                    agreedToTerms ? 'bg-[#024a47]' : 'bg-white'
-                  }`}
-                  onClick={() => setAgreedToTerms(!agreedToTerms)}
-                >
-                  {agreedToTerms && <Check className="w-4 h-4 text-white" />}
+    
+            <button 
+              className="flex-1 bg-[#024a47] text-white font-semibold py-3 px-6 rounded-xl hover:bg-[#035d57] transition-colors" 
+              onClick={download}
+            >
+              Download Agreement
+            </button>
+          </div>
+        
+          {/* Signature Section */}
+          <div className="max-w-lg mx-auto space-y-4">
+            <div className="border-2 border-gray-300 rounded-xl p-6">
+              {!hasCustomerSignature ? (
+                <div className="space-y-4 w-full">
+                  <p className="text-gray-400 text-center">Signature</p>
+                  <input
+                    type="text"
+                    value={customerData?.name || ''}
+                    disabled={true}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-center bg-gray-50"
+                    placeholder="Your name"
+                  />
+                  <DigitalSignature
+                    onSignatureChange={handleCustomerSignatureChange}
+                    signature={customerSignature}
+                    label="Sign here"
+                  />
                 </div>
-                <span className="text-sm text-gray-700">
-                  I have read, understood, and agree to the terms and conditions of this Rent-to-Own Agreement. I acknowledge that this is a legally binding contract and that my digital signature is legally equivalent to a handwritten signature.
-                </span>
-              </label>
+              ) : (
+                <div className="text-center space-y-3 w-full">
+                  <p className="text-[#024a47] font-semibold">Signed by:</p>
+                  <p className="text-lg">{customerData?.name}</p>
+                  <div className="border rounded-lg p-3 bg-gray-50">
+                    {customerSignature && (
+                      <img 
+                        src={customerSignature} 
+                        alt="Customer Signature" 
+                        className="max-w-full h-12 mx-auto"
+                      />
+                    )}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setCustomerSignature('');
+                      setHasCustomerSignature(false);
+                    }}
+                    className="text-sm text-gray-500 underline hover:text-gray-700"
+                  >
+                    Clear signature
+                  </button>
+                </div>
+              )}
             </div>
+    
+            {/* Terms Checkbox */}
+            <label className="flex items-start gap-3 cursor-pointer text-left">
+              <div 
+                className={`w-5 h-5 mt-0.5 rounded border-2 border-[#024a47] flex items-center justify-center flex-shrink-0 ${
+                  agreedToTerms ? 'bg-[#024a47]' : 'bg-white'
+                }`}
+                onClick={() => setAgreedToTerms(!agreedToTerms)}
+              >
+                {agreedToTerms && <Check className="w-3 h-3 text-white" />}
+              </div>
+              <span className="text-xs text-gray-700">
+                I have read, understood, and agree to the terms and conditions of this Rent-to-Own Agreement. I acknowledge that this is a legally binding contract and that my digital signature is legally equivalent to a handwritten signature.
+              </span>
+            </label>
+    
+            {/* Submit Button */}
+            <button
+              onClick={handleAccept}
+              disabled={!hasCustomerSignature || !agreedToTerms}
+              className={`w-full font-semibold py-3 px-6 rounded-xl transition-colors ${
+                hasCustomerSignature && agreedToTerms
+                  ? 'bg-[#024a47] text-white hover:bg-[#035d57]'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              Submit
+            </button>
           </div>
         </div>
       </div>
+    </div>
     );
   }
 
