@@ -1,9 +1,9 @@
-import { act, useState } from 'react';
+import { act, useEffect, useState } from 'react';
 import React from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import axios from 'axios'
 import { BASE_URL } from './baseUrl';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate,useLocation } from 'react-router-dom';
 export default function App() {
   const [activeTab, setActiveTab] = useState('signup');
   const [formData, setFormData] = useState({
@@ -21,6 +21,8 @@ export default function App() {
       [e.target.name]: e.target.value
     });
   };
+
+  const location=useLocation();
 
   const handleSubmit = async(e) => {
    
@@ -64,6 +66,17 @@ navigate('/appliance')
    }
   };
 
+  useEffect(()=>{
+check();
+  },[])
+  const check=()=>{
+    const params=new URLSearchParams(location.search)
+const login=params.get('login')
+if(login){
+  setActiveTab('login')
+
+}
+  }
   return (
     <>
     <ToastContainer containerId={"authPage"}/>
@@ -174,11 +187,20 @@ navigate('/appliance')
             </div>
 
             <div className="pt-3 sm:pt-4 pb-6 sm:pb-8">
-              <p onClick={()=>{
+      <div className='flex flex-row items-between justify-between'>
+      <p onClick={()=>{
 navigate('/reset-password')
-              }} className='cursor-pointer'>
+              }} className='cursor-pointer underline'>
                 Reset Password
               </p>
+
+              <p onClick={()=>{
+navigate('/reset-password')
+              }} className='cursor-pointer underline'>
+                Facing issues contact support
+              </p>
+
+      </div>
               <button
                 onClick={handleSubmit}
                 className="w-full cursor-pointer bg-[#024a47] hover:bg-[#024a47] text-white font-semibold py-3 sm:py-4 px-4 rounded-lg transition-colors text-base sm:text-lg lg:text-xl"
@@ -186,6 +208,8 @@ navigate('/reset-password')
                 {activeTab=="login"?"Log In":"Sign Up"}
               </button>
             </div>
+
+            
           </div>
         </div>
       </div>

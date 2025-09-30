@@ -70,6 +70,7 @@ import TVTroubleshooting from './pages/TVTroubleshooting.jsx'
 import BillingDetailsForm from './pages/BillingDetailsForm.jsx'
 import DeliveryAppointmentPage from './pages/DeliveryAppointmentPage.jsx'
 import ConfirmSubmitPage from './pages/ConfirmSubmitPage.jsx'
+import ContactSupport from './pages/Contactsupport.jsx'
 import RentSimpleAccount from './pages/RentSimpleAccount.jsx'
 
 // Admin-side imports
@@ -107,7 +108,7 @@ createRoot(document.getElementById('root')).render(
           <Route path='/dashboard' element={<RentSimpleAccount/>}/>
 <Route path='/reset-password' element={<Resetpassword/>}></Route>
 <Route path='/confirmation' element={<OrderConfirmation/>}/>
-        
+        <Route path='/contact' element={<ContactSupport/>}/>
           <Route path="/admin/*" element={<AdminApp />}>
             <Route index element={<AdminDashboard />} />
             <Route path="dashboard" element={<AdminDashboard />} />

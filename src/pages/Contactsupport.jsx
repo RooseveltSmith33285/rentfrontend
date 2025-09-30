@@ -5,10 +5,11 @@ import axios from 'axios'
 import { BASE_URL } from '../baseUrl';
 import { useNavigate } from 'react-router-dom';
 
-export default function App() {
+export default function ContactSupport() {
   const [formData, setFormData] = useState({
+    name: '',
     email: '',
-    newPassword: ''
+    issue: ''
   });
 
   const navigate = useNavigate();
@@ -25,42 +26,52 @@ export default function App() {
    
     try {
   
-      if (formData.email.length === 0) {
-        toast.error("Please enter your email", {containerId:"resetPage"})
+      if (formData.name.length === 0) {
+        toast.error("Please enter your name", {containerId:"contactPage"})
         return
       }
-      if (formData.newPassword.length === 0) {
-        toast.error("Please enter your new password", {containerId:"resetPage"})
+      if (formData.email.length === 0) {
+        toast.error("Please enter your email", {containerId:"contactPage"})
+        return
+      }
+      if (formData.issue.length === 0) {
+        toast.error("Please describe your issue", {containerId:"contactPage"})
         return
       }
 
-      const response = await axios.patch(`${BASE_URL}/resetPassword`, {
+      const response = await axios.post(`${BASE_URL}/contactSupport`, {
+        name: formData.name,
         email: formData.email,
-        newPassword: formData.newPassword
+        issue: formData.issue
       })
 
       console.log(response.data)
       toast.dismiss(); 
-      toast.success(response.data.message, {containerId:"resetPage"})
+      toast.success(response.data.message || "Your message has been sent successfully!", {containerId:"contactPage"})
       
-      
-      navigate('/?login=true'); 
+    
+
+      setFormData({
+        name: '',
+        email: '',
+        issue: ''
+      });
       
     } catch(e) {
       console.log(e)
       if (e?.response?.data?.error) {
         toast.dismiss(); 
-        toast.error(e?.response?.data?.error, {containerId:"resetPage"})
+        toast.error(e?.response?.data?.error, {containerId:"contactPage"})
       } else {
         toast.dismiss(); 
-        toast.error("Error while resetting password, please try again", {containerId:"resetPage"})
+        toast.error("Error while sending message, please try again", {containerId:"contactPage"})
       }
     }
   };
 
   return (
     <>
-      <ToastContainer containerId={"resetPage"}/>
+      <ToastContainer containerId={"contactPage"}/>
       <div className="min-h-screen bg-[#f3f4e6] flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl bg-white rounded-lg shadow-lg overflow-hidden mx-auto">
          
@@ -83,7 +94,7 @@ export default function App() {
         
           <div className="px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6">
             <h2 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-[#024a47] text-center">
-              Reset Password
+              Contact Support
             </h2>
           </div>
 
@@ -92,7 +103,7 @@ export default function App() {
             <div className="flex items-center mb-4 sm:mb-6">
               <div className="flex-grow h-px bg-gray-300"></div>
               <span className="px-3 sm:px-4 text-base sm:text-lg lg:text-xl font-semibold text-[#024a47]">
-                Reset Password
+                Get in Touch
               </span>
               <div className="flex-grow h-px bg-gray-300"></div>
             </div>
@@ -101,33 +112,44 @@ export default function App() {
               
               <div>
                 <input
+                  type="text"
+                  name="name"
+                  placeholder="Your Name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className="w-full px-3 sm:px-4 py-3 sm:py-4 text-gray-700 placeholder-gray-400 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#024a47] focus:border-[#024a47] text-base sm:text-lg"
+                />
+              </div>
+
+              <div>
+                <input
                   type="email"
                   name="email"
                   placeholder="Email Address"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="w-full px-3 sm:px-4 py-3 sm:py-4 text-gray-700 placeholder-gray-400 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#024a47] text-base sm:text-lg"
+                  className="w-full px-3 sm:px-4 py-3 sm:py-4 text-gray-700 placeholder-gray-400 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#024a47] focus:border-[#024a47] text-base sm:text-lg"
                 />
               </div>
 
             
               <div>
-                <input
-                  type="password"
-                  name="newPassword"
-                  placeholder="New Password"
-                  value={formData.newPassword}
+                <textarea
+                  name="issue"
+                  placeholder="Describe your issue..."
+                  value={formData.issue}
                   onChange={handleInputChange}
-                  className="w-full px-3 sm:px-4 py-3 sm:py-4 text-gray-700 placeholder-gray-400 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#024a47] text-base sm:text-lg"
+                  rows="5"
+                  className="w-full px-3 sm:px-4 py-3 sm:py-4 text-gray-700 placeholder-gray-400 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#024a47] focus:border-[#024a47] text-base sm:text-lg resize-none"
                 />
               </div>
 
               <div className="pt-3 sm:pt-4 pb-6 sm:pb-8">
                 <button
                   onClick={handleSubmit}
-                  className="w-full cursor-pointer bg-[#024a47] hover:bg-[#024a47] text-white font-semibold py-3 sm:py-4 px-4 rounded-lg transition-colors text-base sm:text-lg lg:text-xl"
+                  className="w-full cursor-pointer bg-[#024a47] hover:bg-[#035d59] text-white font-semibold py-3 sm:py-4 px-4 rounded-lg transition-colors text-base sm:text-lg lg:text-xl"
                 >
-                  Reset Password
+                  Send Message
                 </button>
               </div>
             </div>

@@ -186,7 +186,7 @@ const DigitalSignature = ({ onSignatureChange, signature, label }) => {
   );
 };
 
-const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
+const AgreementModal = ({ isOpen, onClose, onAccept, draftDay,loading,setLoading }) => {
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [customerSignature, setCustomerSignature] = useState('');
@@ -195,6 +195,7 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
   const [hasLessorSignature, setHasLessorSignature] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [currentDate] = useState(new Date().toLocaleDateString());
+  
   const [customerData, setCustomerData] = useState();
   const [showAgreementContent, setShowAgreementContent] = useState(false);
 const [signatureDataPdf,setSignatureDataPdf]=useState()
@@ -482,6 +483,7 @@ const [draftDayPdf,setDraftDayPdf]=useState()
   };
 
   const handleAccept = () => {
+    setLoading(true)
     if (agreedToTerms && hasCustomerSignature && hasLessorSignature && customerName.trim()) {
       const signatureData = {
         customerSignature,
@@ -626,14 +628,14 @@ console.log(e.message)
             {/* Submit Button */}
             <button
               onClick={handleAccept}
-              disabled={!hasCustomerSignature || !agreedToTerms}
+              disabled={!hasCustomerSignature || !agreedToTerms || loading}
               className={`w-full font-semibold py-3 px-6 rounded-xl transition-colors ${
                 hasCustomerSignature && agreedToTerms
                   ? 'bg-[#024a47] text-white hover:bg-[#035d57]'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
-              Submit
+            {loading?'...Processing':'Submit'}
             </button>
           </div>
         </div>
@@ -827,7 +829,7 @@ export default function BillingDetailsForm() {
   const [showAgreementModal, setShowAgreementModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [cardError, setCardError] = useState(null);
-  
+  const [loading,setLoading]=useState(false)
   const [cardState,setCard]=useState({
     card:'',
     cvc:'',
@@ -876,6 +878,7 @@ export default function BillingDetailsForm() {
 
   const handleAgreementAccept = async (signatureData) => {
     try {
+      setLoading(true)
       const token = localStorage.getItem("token");
       const headers = { 
         Authorization: `Bearer ${token}`,
@@ -933,6 +936,7 @@ export default function BillingDetailsForm() {
       navigate('/confirmation');
       
     } catch (e) {
+      setLoading(false)
       console.error('=== ERROR IN BILLING FORM SUBMISSION ===');
       console.error('Error timestamp:', new Date().toISOString());
       console.error('Error object:', e);
@@ -1163,6 +1167,8 @@ export default function BillingDetailsForm() {
         onClose={() => setShowAgreementModal(false)}
         onAccept={handleAgreementAccept}
         draftDay={draftDay}
+        loading={loading}
+        setLoading={setLoading}
       />
     </>
   );
