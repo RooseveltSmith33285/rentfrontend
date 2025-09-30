@@ -865,10 +865,11 @@ export default function BillingDetailsForm() {
 
   const handleSubmit = async () => {
     setIsProcessing(true);
+    const isValid = await validateForm();
     
-  
+    if (isValid) {
       setShowAgreementModal(true);
-
+    }
     
     setIsProcessing(false);
   };
@@ -880,7 +881,31 @@ export default function BillingDetailsForm() {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
-  
+      const { error, paymentMethod } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: elements.getElement(CardNumberElement),
+        billing_details: {
+          address: {
+            postal_code: zipCode,
+          },
+        },
+      });
+
+      const requestData = {
+        paymentMethodId: paymentMethod.id,
+        zipCode,
+        draftDay,
+        saveCard,
+        agreement: {
+          customerName: signatureData.customerName,
+          customerSignature: signatureData.customerSignature,
+          lessorSignature: signatureData.lessorSignature,
+          signedDate: signatureData.signedDate,
+          agreementVersion: '1.0',
+          signatureTimestamp: new Date().toISOString()
+        }
+      };
+      
       // Parse URL data once
       const urlParams = new URLSearchParams(window.location.search);
       const encodedData = urlParams.get('data');
@@ -889,7 +914,7 @@ export default function BillingDetailsForm() {
       // Execute both API calls in parallel
       const [billingResponse, orderResponse] = await Promise.all([
         axios.post(`${BASE_URL}/storeBilling`, 
-          { cardState, draftDay }, 
+        requestData,
           { headers }
         ),
         axios.post(`${BASE_URL}/createOrder`, 
@@ -926,6 +951,54 @@ export default function BillingDetailsForm() {
     }
   };
 
+  const validateForm = async () => {
+    setCardError(null);
+    
+    if (!stripe || !elements) {
+      setCardError("Stripe not loaded yet. Please wait...");
+      return false;
+    }
+
+    const cardNumberElement = elements.getElement(CardNumberElement);
+    const cardExpiryElement = elements.getElement(CardExpiryElement);
+    const cardCvcElement = elements.getElement(CardCvcElement);
+
+    if (!cardNumberElement || !cardExpiryElement || !cardCvcElement) {
+      setCardError("Payment fields not loaded properly");
+      return false;
+    }
+
+   
+    try {
+      
+      const { error } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: cardNumberElement,
+        billing_details: {
+          address: {
+            postal_code: zipCode,
+          },
+        },
+      });
+
+      if (error) {
+        setCardError(error.message);
+        return false;
+      }
+
+      if (zipCode.length === 0) {
+        alert("Please enter zip code");
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      setCardError("Error validating card details");
+      return false;
+    }
+  };
+
+
   return (
     <>
       <div className="max-w-md mx-auto p-8 bg-[#f9faf5] min-h-screen">
@@ -943,16 +1016,8 @@ export default function BillingDetailsForm() {
             <div className="flex items-center gap-3">
               <CreditCard className="w-6 h-6 text-[#024a47]" />
               <div className="flex-1">
-                <input type="text"
-                placeholder="Card Number"
-                    onChange={(e)=>{
-                     setCard({
-                      ...cardState,
-                      card:e.target.value
-                     })
-                     }}
-                     value={cardState.card}
-
+              <CardNumberElement
+                  options={elementStyles}
                   className="w-full text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
                 />
               </div>
@@ -966,15 +1031,8 @@ export default function BillingDetailsForm() {
             <div className="flex items-center gap-3">
               <Calendar className="w-6 h-6 text-[#024a47]" />
               <div className="flex-1">
-                <input
-                 placeholder="Card Expiray"
-                      onChange={(e)=>{
-                  setCard({
-                    ...cardState,
-                    expirey:e.target.value
-                  })
-                 }}
-                 value={cardState.expirey}
+              <CardExpiryElement
+                  options={elementStyles}
                   className="w-full text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
                 />
               </div>
@@ -984,15 +1042,8 @@ export default function BillingDetailsForm() {
             <div className="flex items-center gap-3">
               <MoreHorizontal className="w-6 h-6 text-[#024a47]" />
               <div className="flex-1">
-                <input type="text"
-                 placeholder="CVC"
-                       onChange={(e)=>{
-                        setCard({
-                          ...cardState,
-                          cvc:e.target.value
-                        })
-                       }}
-                       value={cardState.cvc}
+              <CardCvcElement
+                  options={elementStyles}
                   className="w-full text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
                 />
               </div>
@@ -1018,7 +1069,11 @@ export default function BillingDetailsForm() {
         </div>
 
     
-     
+        {cardError && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+            {cardError}
+          </div>
+        )}
 
     
         <div className="mb-8">
