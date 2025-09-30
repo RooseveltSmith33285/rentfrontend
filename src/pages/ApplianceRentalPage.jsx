@@ -14,6 +14,7 @@ export default function ApplianceRentalPage() {
   const [selectedComboAppliance, setSelectedComboAppliance] = useState(null);
   const [selectedPlugType, setSelectedPlugType] = useState('');
   const [selectedTvSize, setSelectedTvSize] = useState(0);
+  const [loading,setLoading]=useState(false)
   const navigate = useNavigate();
 
   // Load cart from localStorage on mount
@@ -136,25 +137,29 @@ export default function ApplianceRentalPage() {
 
   const syncCartWithAPI = async () => {
     try {
+      setLoading(true)
       const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-  
       
-      const apiCalls = [
-        axios.post(`${BASE_URL}/addItemsToCart`, { cartItems }, { headers })
-      ];
-  
+      
+     
+   
+       await axios.post(`${BASE_URL}/addItemsToCart`, { cartItems }, { headers:{
+        Authorization:`Bearer ${token}`
+       } })
+     
+
+      // Update TV size if exists
       if (selectedTvSize) {
-        apiCalls.push(
-          axios.patch(`${BASE_URL}/updateTvscreen`, 
-            { tvSize: selectedTvSize },
-            { headers }
-          )
+        await axios.patch(`${BASE_URL}/updateTvscreen`, 
+          { tvSize: selectedTvSize },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
         );
       }
-  
-      await Promise.all(apiCalls);
-  
+
       return true;
     } catch (e) {
       console.error('Error syncing cart with API:', e);
@@ -170,6 +175,7 @@ export default function ApplianceRentalPage() {
     }
 
     const synced = await syncCartWithAPI();
+    setLoading(false)
     if (synced) {
       navigate('/delivery');
     }
@@ -470,7 +476,7 @@ export default function ApplianceRentalPage() {
                     Continue Shopping
                   </button>
                   <button onClick={handleContinue} className="flex-1 bg-[#024a47] hover:bg-[#024a47] text-white py-3 px-6 rounded-lg font-semibold transition-colors">
-                    Proceed to Checkout
+               {loading?'...Processing':'Proceed to Checkout'}
                   </button>
                 </div>
               </div>
@@ -575,7 +581,7 @@ export default function ApplianceRentalPage() {
                       }`}
                     disabled={selectedAppliances.length === 0}
                   >
-                    Continue
+                   {loading?'...Processing':' Continue'}
                   </button>
                 </div>
               </div>
