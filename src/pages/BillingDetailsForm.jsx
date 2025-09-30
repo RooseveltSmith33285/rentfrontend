@@ -197,6 +197,8 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
   const [currentDate] = useState(new Date().toLocaleDateString());
   const [customerData, setCustomerData] = useState();
   const [showAgreementContent, setShowAgreementContent] = useState(false);
+const [signatureDataPdf,setSignatureDataPdf]=useState()
+const [draftDayPdf,setDraftDayPdf]=useState()
 
   const handleScroll = (e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.target;
@@ -265,6 +267,9 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
   };
 
   const generateAgreementPDF = (signatureData, draftDay) => {
+    console.log(signatureData)
+    console.log(draftDay)
+    console.log("PDF")
    
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
@@ -485,13 +490,34 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
         signedDate: currentDate
       };
       
-    
-      generateAgreementPDF(signatureData, draftDay);
+
+      // generateAgreementPDF(signatureData, draftDay);
       
       onAccept(signatureData);
     }
   };
 
+  const download=()=>{
+    try{
+     
+        const signatureData = {
+          customerSignature,
+          lessorSignature,
+          customerName: customerName.trim(),
+          signedDate: currentDate
+        };
+        
+        console.log("saving")
+  
+  
+        generateAgreementPDF(signatureData, draftDay);
+        
+        // onAccept(signatureData);
+      
+    }catch(e){
+console.log(e.message)
+    }
+  }
   const isFormComplete = agreedToTerms && hasCustomerSignature && hasLessorSignature && customerName.trim();
 
   if (!isOpen) return null;
@@ -520,13 +546,19 @@ const AgreementModal = ({ isOpen, onClose, onAccept, draftDay }) => {
             </div>
 
            
-            <button
+           <div className="flex flex-col gap-[1rem]">
+
+           <button
               onClick={() => setShowAgreementContent(true)}
               className="w-full max-w-md mx-auto bg-[#024a47] text-white text-xl font-semibold py-4 px-8 rounded-2xl hover:bg-[#035d57] transition-colors"
             >
               View Agreement
             </button>
 
+<button className="w-full max-w-md mx-auto bg-[#024a47] text-white text-xl font-semibold py-4 px-8 rounded-2xl hover:bg-[#035d57] transition-colors" onClick={download}>
+  Download Agreement
+</button>
+           </div>
           
             <div className="space-y-6 max-w-md mx-auto">
               <div className="border-2 border-gray-300 rounded-2xl p-8 min-h-[200px] flex flex-col items-center justify-center">
@@ -795,6 +827,7 @@ export default function BillingDetailsForm() {
   const [showAgreementModal, setShowAgreementModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [cardError, setCardError] = useState(null);
+  
   const [cardState,setCard]=useState({
     card:'',
     cvc:'',

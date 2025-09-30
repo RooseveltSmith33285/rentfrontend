@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import React from 'react';
 import axios from 'axios';
-import { ToastContainer,toast } from 'react-toastify';
+import { ToastContainer, toast } from 'react-toastify';
 import { BASE_URL } from '../baseUrl';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,99 +10,119 @@ export default function ApplianceRentalPage() {
   const [showCart, setShowCart] = useState(false);
   const [appliances, setAppliances] = useState([]);
   const [cartItems, setCartItems] = useState([]);
-  const [loadingCart, setLoadingCart] = useState(false);
   const [showComboPopup, setShowComboPopup] = useState(false);
   const [selectedComboAppliance, setSelectedComboAppliance] = useState(null);
   const [selectedPlugType, setSelectedPlugType] = useState('');
-  const [selectedTvSize,setSelectedTvSize]=useState(0)
+  const [selectedTvSize, setSelectedTvSize] = useState(0);
   const navigate = useNavigate();
 
-  const handleSelect = async (appliance) => {
+  // Load cart from localStorage on mount
+  useEffect(() => {
+    getProducts();
+    loadCartFromLocalStorage();
+  }, []);
+
+  const loadCartFromLocalStorage = () => {
     try {
-      let token = localStorage.getItem('token');
-      
+      const savedCart = localStorage.getItem('cartItems');
+      if (savedCart) {
+        const parsedCart = JSON.parse(savedCart);
+        setCartItems(parsedCart);
+        setSelectedAppliances(parsedCart.map(item => item._id));
+      }
+    } catch (e) {
+      console.error('Error loading cart from localStorage:', e);
+    }
+  };
+
+  const saveCartToLocalStorage = (items) => {
+    try {
+      localStorage.setItem('cartItems', JSON.stringify(items));
+    } catch (e) {
+      console.error('Error saving cart to localStorage:', e);
+      toast.error('Error saving cart');
+    }
+  };
+
+  const handleSelect = (appliance) => {
+    try {
       // Check if it's a TV appliance
       if (appliance.name.toLowerCase().includes('tv') && !selectedAppliances.includes(appliance._id)) {
         setSelectedComboAppliance(appliance);
         setShowComboPopup(true);
-        return; 
+        return;
       }
-      
+
       if (appliance.combo === true && !selectedAppliances.includes(appliance._id)) {
         setSelectedComboAppliance(appliance);
         setShowComboPopup(true);
-        return; 
+        return;
       }
-      
+
       if (selectedAppliances.includes(appliance._id)) {
-        await axios.delete(`${BASE_URL}/removeFromCart`, {
-          data: { applianceId: appliance._id },
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        // Remove from cart
+        removeFromCart(appliance._id);
       } else {
-        await addToCart(appliance);
+        // Add to cart
+        addToLocalCart(appliance);
       }
-      
-      await fetchCartItems();
-      
-    } catch(e) {
+    } catch (e) {
       console.error('Error updating cart:', e);
       toast.error('Error updating cart');
     }
   };
 
-  const addToCart = async (appliance, plugType = null, tvSize = null) => {
-    try {
-      let token = localStorage.getItem('token');
-      let payload = { applianceId: appliance._id };
-      
-      // Handle TV size selection
-      if (appliance.name.toLowerCase().includes('tv') && tvSize) {
-        payload.tvSize = tvSize;
-      }
-      
-      // Handle combo appliance (dryer with plug type)
-      if (appliance.combo === true && plugType) {
-        payload.comboItem = {
-          plugType: plugType,
-          plugDescription: plugType === '3-prong' 
-            ? '3-prong 220v USA Homes' 
-            : '4-prong 220V USA Homes'
-        };
-      }
-      
-      await axios.post(`${BASE_URL}/addItemsToCart`, payload, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      
-    } catch(e) {
-      throw e;
+  const addToLocalCart = (appliance, plugType = null, tvSize = null) => {
+    const cartItem = { ...appliance };
+
+    // Handle TV size selection
+    if (appliance.name.toLowerCase().includes('tv') && tvSize) {
+      cartItem.tvSize = tvSize;
+      setSelectedTvSize(tvSize.replace('"', ''));
     }
+
+    // Handle combo appliance (dryer with plug type)
+    if (appliance.combo === true && plugType) {
+      cartItem.comboItem = {
+        plugType: plugType,
+        plugDescription: plugType === '3-prong'
+          ? '3-prong 220v USA Homes'
+          : '4-prong 220V USA Homes'
+      };
+    }
+
+    const updatedCart = [...cartItems, cartItem];
+    setCartItems(updatedCart);
+    setSelectedAppliances([...selectedAppliances, appliance._id]);
+    saveCartToLocalStorage(updatedCart);
+    toast.success('Item added to cart');
   };
 
-  const handlePlugTypeSelect = async (plugType) => {
+  const removeFromCart = (applianceId) => {
+    const updatedCart = cartItems.filter(item => item._id !== applianceId);
+    setCartItems(updatedCart);
+    setSelectedAppliances(selectedAppliances.filter(id => id !== applianceId));
+    saveCartToLocalStorage(updatedCart);
+    toast.info('Item removed from cart');
+  };
+
+  const handlePlugTypeSelect = (plugType) => {
     try {
       setSelectedPlugType(plugType);
-      
+
       if (selectedComboAppliance) {
         // Check if it's a TV or a combo appliance
         if (selectedComboAppliance.name.toLowerCase().includes('tv')) {
-          await addToCart(selectedComboAppliance, null, plugType);
+          addToLocalCart(selectedComboAppliance, null, plugType);
         } else {
-          await addToCart(selectedComboAppliance, plugType);
+          addToLocalCart(selectedComboAppliance, plugType);
         }
-        await fetchCartItems(); 
       }
-      
+
       setShowComboPopup(false);
       setSelectedComboAppliance(null);
       setSelectedPlugType('');
-      
-    } catch(e) {
+    } catch (e) {
       console.error('Error adding appliance to cart:', e);
       toast.error('Error adding appliance to cart');
     }
@@ -113,43 +133,70 @@ export default function ApplianceRentalPage() {
     setSelectedComboAppliance(null);
     setSelectedPlugType('');
   };
-  
-  const fetchCartItems = async () => {
+
+  const syncCartWithAPI = async () => {
     try {
-      setLoadingCart(true);
-      let token = localStorage.getItem('token');
-      let response = await axios.get(`${BASE_URL}/getCartItems`, {
-        headers: {
-          Authorization: `Bearer ${token}`
+      const token = localStorage.getItem('token');
+      
+      
+      await axios.patch(`${BASE_URL}/removeItemsFromCart`,{},{
+        headers:{
+          Authorization:`Bearer ${token}`
         }
-      });
-console.log("CARTITEMS")
-      console.log(response.data)
-      setSelectedTvSize(response?.data?.cartItems?.tvSize)
-      const items = response.data.cartItems.items || [];
-      console.log("CART ITEMS:", items);
-      
-      setCartItems(items);
-      
-      const idsOnly = items.map(val => val._id);
-      setSelectedAppliances(prev => {
-        if (prev.length !== idsOnly.length || !idsOnly.every(id => prev.includes(id))) {
-          return idsOnly;
+      })
+      // Add all items to cart
+      for (const item of cartItems) {
+        const payload = { applianceId: item._id };
+
+        if (item.tvSize) {
+          payload.tvSize = item.tvSize;
         }
-        return prev;
-      });
-      
-    } catch(e) {
-      console.error('Error fetching cart items:', e);
-      toast.error('Error loading cart items');
-      setCartItems([]);
-      setSelectedAppliances([]);
-    } finally {
-      setLoadingCart(false);
+
+        if (item.comboItem) {
+          payload.comboItem = item.comboItem;
+        }
+
+        await axios.post(`${BASE_URL}/addItemsToCart`, payload, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+          
+        });
+      }
+
+      // Update TV size if exists
+      if (selectedTvSize) {
+        await axios.patch(`${BASE_URL}/updateTvscreen`, 
+          { tvSize: selectedTvSize },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+      }
+
+      return true;
+    } catch (e) {
+      console.error('Error syncing cart with API:', e);
+      toast.error('Error syncing cart');
+      return false;
     }
   };
 
-  const handleViewCart = async () => {
+  const handleContinue = async () => {
+    if (selectedAppliances.length === 0) {
+      toast.warning('Please select at least one item');
+      return;
+    }
+
+    const synced = await syncCartWithAPI();
+    if (synced) {
+      navigate('/delivery');
+    }
+  };
+
+  const handleViewCart = () => {
     setShowCart(true);
   };
 
@@ -158,42 +205,34 @@ console.log("CARTITEMS")
   };
 
   const getTotalPrice = () => {
-    let total=cartItems.reduce((total, item) => {
+    let total = cartItems.reduce((total, item) => {
       return total + parseInt(item.monthly_price);
     }, 0);
 
-  
-    if(cartItems?.find(u=>u?.name?.toLowerCase().includes("tv"))){
-      console.log("CALLED")
-      total=(total+parseInt(selectedTvSize))-1
+    if (cartItems?.find(u => u?.name?.toLowerCase().includes("tv"))) {
+      total = (total + parseInt(selectedTvSize)) - 1;
     }
-    return total
+    return total;
   };
-
-  useEffect(() => {
-    getProducts();
-    fetchCartItems();
-  }, []);
 
   const getProducts = async () => {
     try {
-      let response = await axios.get(`${BASE_URL}/getProducts`)
-      console.log(response.data)
-      setAppliances(response.data.products)
-    } catch(e) {
-      if(e?.response?.data?.error){
-        toast.dismiss(); 
-        toast.error(e?.response?.data?.error,{containerId:"productsPage"})
+      let response = await axios.get(`${BASE_URL}/getProducts`);
+      setAppliances(response.data.products);
+    } catch (e) {
+      if (e?.response?.data?.error) {
+        toast.dismiss();
+        toast.error(e?.response?.data?.error, { containerId: "productsPage" });
       } else {
-        toast.dismiss(); 
-        toast.error("Error while fetching products please try again",{containerId:"productsPage"})
+        toast.dismiss();
+        toast.error("Error while fetching products please try again", { containerId: "productsPage" });
       }
     }
-  }
+  };
 
-  const ComboPopup = ({showComboPopup, selectedPlugType, setShowComboPopup, setSelectedPlugType, selectedComboAppliance, handlePlugTypeSelect}) => {
+  const ComboPopup = ({ showComboPopup, selectedPlugType, setShowComboPopup, setSelectedPlugType, selectedComboAppliance, handlePlugTypeSelect }) => {
     const isTV = selectedComboAppliance?.name.toLowerCase().includes('tv');
-    
+
     const tvSizes = [
       { size: '40"', price: 40, note: 'Entry-level size for bedrooms, dorm rooms, small apartments' },
       { size: '43"', price: 43, note: 'Popular budget-friendly living-room option' },
@@ -208,40 +247,27 @@ console.log("CARTITEMS")
 
     const handlePlugSelect = (plugType) => {
       handlePlugTypeSelect(plugType);
-     
     };
 
-    const handleTvSize=async(tvSize)=>{
-     handlePlugSelect(tvSize)
-     const cleanSize = tvSize.replace('"', '');
-     setSelectedTvSize(cleanSize)
-try{
-  let token=localStorage.getItem('token')
-let response=await axios.patch(`${BASE_URL}/updateTvscreen`,{tvSize:cleanSize},{
-  headers:{
-    Authorization:`Bearer ${token}`
-  }
-})
-}catch(e){
+    const handleTvSize = (tvSize) => {
+      handlePlugSelect(tvSize);
+    };
 
-}
-    }
-  
     const PlugIcon3Prong = () => (
       <div className="w-24 h-24 mx-auto mb-4">
         <svg viewBox="0 0 100 100" className="w-full h-full">
-          <circle cx="50" cy="50" r="45" fill="none" stroke="#024a47" strokeWidth="3"/>
+          <circle cx="50" cy="50" r="45" fill="none" stroke="#024a47" strokeWidth="3" />
           <line x1="35" y1="25" x2="45" y2="35" stroke="#024a47" strokeWidth="4" strokeLinecap="round" />
           <line x1="65" y1="25" x2="55" y2="35" stroke="#024a47" strokeWidth="4" strokeLinecap="round" />
           <line x1="50" y1="60" x2="50" y2="75" stroke="#024a47" strokeWidth="4" strokeLinecap="round" />
         </svg>
       </div>
     );
-  
+
     const PlugIcon4Prong = () => (
       <div className="w-24 h-24 mx-auto mb-4">
         <svg viewBox="0 0 100 100" className="w-full h-full">
-          <circle cx="50" cy="50" r="45" fill="none" stroke="#024a47" strokeWidth="3"/>
+          <circle cx="50" cy="50" r="45" fill="none" stroke="#024a47" strokeWidth="3" />
           <rect x="35" y="25" width="4" height="15" fill="#024a47" rx="2" />
           <rect x="48" y="25" width="4" height="15" fill="#024a47" rx="2" />
           <rect x="61" y="25" width="4" height="15" fill="#024a47" rx="2" />
@@ -249,7 +275,7 @@ let response=await axios.patch(`${BASE_URL}/updateTvscreen`,{tvSize:cleanSize},{
         </svg>
       </div>
     );
-  
+
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
         <div className="bg-white shadow-sm">
@@ -273,7 +299,7 @@ let response=await axios.patch(`${BASE_URL}/updateTvscreen`,{tvSize:cleanSize},{
             </div>
           </div>
         </div>
-  
+
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="max-w-4xl w-full">
             {isTV ? (
@@ -282,7 +308,7 @@ let response=await axios.patch(`${BASE_URL}/updateTvscreen`,{tvSize:cleanSize},{
                   Select TV Size
                 </h2>
                 <p className="text-center text-gray-600 mb-8">Choose the perfect screen size for your space</p>
-                
+
                 <div className="grid gap-4 max-w-3xl mx-auto">
                   {tvSizes.map((tv) => (
                     <div key={tv.size} className="bg-white rounded-xl border-2 border-gray-200 p-6 hover:shadow-lg transition-all duration-200">
@@ -317,7 +343,7 @@ let response=await axios.patch(`${BASE_URL}/updateTvscreen`,{tvSize:cleanSize},{
                 <h2 className="text-4xl font-bold text-[#024a47] text-center mb-12">
                   Select Dryer Plug Type
                 </h2>
-  
+
                 <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
                   <div className="bg-white rounded-2xl border-2 border-gray-200 p-8 text-center hover:shadow-lg transition-all duration-200">
                     <PlugIcon3Prong />
@@ -330,7 +356,7 @@ let response=await axios.patch(`${BASE_URL}/updateTvscreen`,{tvSize:cleanSize},{
                       Select
                     </button>
                   </div>
-  
+
                   <div className="bg-white rounded-2xl border-2 border-gray-200 p-8 text-center hover:shadow-lg transition-all duration-200">
                     <PlugIcon4Prong />
                     <h3 className="text-3xl font-bold text-[#024a47] mb-2">4-Prong</h3>
@@ -349,7 +375,7 @@ let response=await axios.patch(`${BASE_URL}/updateTvscreen`,{tvSize:cleanSize},{
         </div>
       </div>
     );
-  }
+  };
 
   const WasherDryerIcon = () => (
     <div className="flex space-x-1">
@@ -405,11 +431,7 @@ let response=await axios.patch(`${BASE_URL}/updateTvscreen`,{tvSize:cleanSize},{
             <button onClick={handleCloseCart} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
           </div>
 
-          {loadingCart ? (
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-              <p className="text-gray-500 text-lg">Loading cart...</p>
-            </div>
-          ) : cartItems.length === 0 ? (
+          {cartItems.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
               <p className="text-gray-500 text-lg">Your cart is empty</p>
               <button onClick={handleCloseCart} className="mt-4 bg-[#024a47] hover:bg-[#024a47] text-white px-6 py-3 rounded-lg font-semibold transition-colors">
@@ -451,8 +473,8 @@ let response=await axios.patch(`${BASE_URL}/updateTvscreen`,{tvSize:cleanSize},{
                     </div>
                   </div>
                   <div className="flex items-center space-x-4">
-                    <span className="text-xl font-bold text-gray-900">${item?.name?.match(/tv/i)?(item.monthly_price*parseInt(selectedTvSize)):item.monthly_price}/mo</span>
-                    <button onClick={() => handleSelect(item)} className="text-red-500 hover:text-red-700 text-sm font-semibold">
+                    <span className="text-xl font-bold text-gray-900">${item?.name?.match(/tv/i) ? (item.monthly_price * parseInt(selectedTvSize)) : item.monthly_price}/mo</span>
+                    <button onClick={() => removeFromCart(item._id)} className="text-red-500 hover:text-red-700 text-sm font-semibold">
                       Remove
                     </button>
                   </div>
@@ -468,7 +490,7 @@ let response=await axios.patch(`${BASE_URL}/updateTvscreen`,{tvSize:cleanSize},{
                   <button onClick={handleCloseCart} className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 px-6 rounded-lg font-semibold transition-colors">
                     Continue Shopping
                   </button>
-                  <button onClick={() => navigate('/delivery')} className="flex-1 bg-[#024a47] hover:bg-[#024a47] text-white py-3 px-6 rounded-lg font-semibold transition-colors">
+                  <button onClick={handleContinue} className="flex-1 bg-[#024a47] hover:bg-[#024a47] text-white py-3 px-6 rounded-lg font-semibold transition-colors">
                     Proceed to Checkout
                   </button>
                 </div>
@@ -484,13 +506,13 @@ let response=await axios.patch(`${BASE_URL}/updateTvscreen`,{tvSize:cleanSize},{
     <>
       <ToastContainer containerId={"productsPage"} />
       {showComboPopup ? (
-        <ComboPopup 
-          selectedPlugType={selectedPlugType} 
-          setSelectedPlugType={setSelectedPlugType} 
-          showComboPopup={showComboPopup} 
+        <ComboPopup
+          selectedPlugType={selectedPlugType}
+          setSelectedPlugType={setSelectedPlugType}
+          showComboPopup={showComboPopup}
           setShowComboPopup={setShowComboPopup}
           selectedComboAppliance={selectedComboAppliance}
-          handlePlugTypeSelect={handlePlugTypeSelect} 
+          handlePlugTypeSelect={handlePlugTypeSelect}
         />
       ) : (
         <div className="min-h-screen bg-[#f9faf5] p-4 sm:p-6 md:p-8">
@@ -543,11 +565,10 @@ let response=await axios.patch(`${BASE_URL}/updateTvscreen`,{tvSize:cleanSize},{
 
                   <button
                     onClick={() => handleSelect(appliance)}
-                    className={`w-full py-3 px-6 rounded-lg font-semibold text-lg transition-colors ${
-                      selectedAppliances.includes(appliance._id)
+                    className={`w-full py-3 px-6 rounded-lg font-semibold text-lg transition-colors ${selectedAppliances.includes(appliance._id)
                         ? 'bg-[#024a47] text-white'
                         : 'bg-[#024a47] hover:bg-[#024a47] text-white'
-                    }`}
+                      }`}
                   >
                     {selectedAppliances.includes(appliance._id) ? 'Selected' : 'Select'}
                   </button>
@@ -562,18 +583,17 @@ let response=await axios.patch(`${BASE_URL}/updateTvscreen`,{tvSize:cleanSize},{
                     {selectedAppliances.length} item{selectedAppliances.length !== 1 ? 's' : ''} selected
                   </span>
                 </div>
-                
+
                 <div className="flex space-x-4">
                   <button onClick={handleViewCart} className="bg-white text-[#024a47] px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
                     View Cart
                   </button>
-                  <button 
-                    onClick={() => navigate('/delivery')}
-                    className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
-                      selectedAppliances.length > 0
-                        ? 'bg-[#024a47] text-white hover:bg-[#024a47]'
+                  <button
+                    onClick={handleContinue}
+                    className={`px-6 py-3 rounded-lg font-semibold transition-colors ${selectedAppliances.length > 0
+                        ? 'bg-white text-[#024a47] hover:bg-gray-100'
                         : 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                    }`}
+                      }`}
                     disabled={selectedAppliances.length === 0}
                   >
                     Continue
