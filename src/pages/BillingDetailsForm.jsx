@@ -959,6 +959,108 @@ export default function BillingDetailsForm() {
 
 
 
+  // const handleAgreementAccept = async (signatureData) => {
+  //   try {
+  //     setLoading(true);
+  //     setIsProcessing(true);
+      
+  //     const token = localStorage.getItem("token");
+  //     const headers = { 
+  //       Authorization: `Bearer ${token}`,
+  //       'Content-Type': 'application/json'
+  //     };
+      
+  //     const { error, paymentMethod } = await stripe.createPaymentMethod({
+  //       type: 'card',
+  //       card: elements.getElement(CardNumberElement),
+  //       billing_details: {
+  //         address: {
+  //           postal_code: zipCode,
+  //         },
+  //       },
+  //     });
+
+  //     // Handle Stripe client-side errors
+  //     if (error) {
+  //       toast.error(error.message, { containerId: 'billingPage' });
+  //       return;
+  //     }
+
+  //     const requestData = {
+  //       paymentMethodId: paymentMethod.id,
+  //       zipCode,
+  //       draftDay,
+  //       saveCard,
+  //       agreement: {
+  //         customerName: signatureData.customerName,
+  //         customerSignature: signatureData.customerSignature,
+  //         lessorSignature: signatureData.lessorSignature,
+  //         signedDate: signatureData.signedDate,
+  //         agreementVersion: '1.0',
+  //         signatureTimestamp: new Date().toISOString()
+  //       }
+  //     };
+      
+  //     const urlParams = new URLSearchParams(window.location.search);
+  //     const encodedData = urlParams.get('data');
+  //     const orderData = JSON.parse(decodeURIComponent(encodedData));
+  
+  //     // Execute both API calls in parallel
+  //     const [billingResponse, orderResponse] = await Promise.all([
+  //       axios.post(`${BASE_URL}/storeBilling`, requestData, { headers }),
+  //       axios.post(`${BASE_URL}/createOrder`, orderData, { headers })
+  //     ]);
+  
+  //     console.log('Backend responses received:', { 
+  //       billing: billingResponse.data,
+  //       order: orderResponse.data 
+  //     });
+      
+  //     toast.success('We are working on your order. Thank you for trusting Rent Simple Deals!', { 
+  //       containerId: 'billingPage' 
+  //     });
+      
+  //     setShowAgreementModal(false);
+  //     navigate('/confirmation');
+      
+  //   } catch (e) {
+  //     console.error('=== ERROR IN BILLING FORM SUBMISSION ===');
+  //     console.error('Error timestamp:', new Date().toISOString());
+  //     console.error('Error object:', e);
+      
+  //     let errorMessage = 'An unexpected error occurred. Please try again.';
+      
+  //     // Handle backend response errors
+  //     if (e?.response?.data) {
+  //       const responseData = e.response.data;
+        
+  //       // Payment-specific errors (from your backend)
+  //       if (responseData.type === 'payment_error') {
+  //         errorMessage = responseData.error;
+  //       } 
+  //       // Other backend errors
+  //       else if (responseData.error) {
+  //         errorMessage = responseData.error;
+  //       }
+  //       // Validation errors
+  //       else if (responseData.details) {
+  //         errorMessage = `Validation error: ${responseData.details}`;
+  //       }
+  //     } 
+  //     // Network errors
+  //     else if (e?.request) {
+  //       errorMessage = 'Network error. Please check your internet connection and try again.';
+  //     }
+      
+  //     toast.error(errorMessage, { containerId: 'billingPage' });
+      
+  //   } finally {
+  //     setLoading(false);
+  //     setIsProcessing(false);
+  //   }
+  // };
+
+
   const handleAgreementAccept = async (signatureData) => {
     try {
       setLoading(true);
@@ -979,13 +1081,12 @@ export default function BillingDetailsForm() {
           },
         },
       });
-
-      // Handle Stripe client-side errors
+  
       if (error) {
         toast.error(error.message, { containerId: 'billingPage' });
         return;
       }
-
+  
       const requestData = {
         paymentMethodId: paymentMethod.id,
         zipCode,
@@ -1005,16 +1106,23 @@ export default function BillingDetailsForm() {
       const encodedData = urlParams.get('data');
       const orderData = JSON.parse(decodeURIComponent(encodedData));
   
-      // Execute both API calls in parallel
-      const [billingResponse, orderResponse] = await Promise.all([
-        axios.post(`${BASE_URL}/storeBilling`, requestData, { headers }),
-        axios.post(`${BASE_URL}/createOrder`, orderData, { headers })
-      ]);
+      // STEP 1: Store billing first and WAIT for it to complete
+      console.log('Storing billing information...');
+      const billingResponse = await axios.post(
+        `${BASE_URL}/storeBilling`, 
+        requestData, 
+        { headers }
+      );
+      console.log('Billing stored successfully:', billingResponse.data);
   
-      console.log('Backend responses received:', { 
-        billing: billingResponse.data,
-        order: orderResponse.data 
-      });
+      // STEP 2: Now create the order (paymentMethodToken is saved in DB)
+      console.log('Creating order...');
+      const orderResponse = await axios.post(
+        `${BASE_URL}/createOrder`, 
+        orderData, 
+        { headers }
+      );
+      console.log('Order created successfully:', orderResponse.data);
       
       toast.success('We are working on your order. Thank you for trusting Rent Simple Deals!', { 
         containerId: 'billingPage' 
@@ -1030,25 +1138,17 @@ export default function BillingDetailsForm() {
       
       let errorMessage = 'An unexpected error occurred. Please try again.';
       
-      // Handle backend response errors
       if (e?.response?.data) {
         const responseData = e.response.data;
         
-        // Payment-specific errors (from your backend)
         if (responseData.type === 'payment_error') {
           errorMessage = responseData.error;
-        } 
-        // Other backend errors
-        else if (responseData.error) {
+        } else if (responseData.error) {
           errorMessage = responseData.error;
-        }
-        // Validation errors
-        else if (responseData.details) {
+        } else if (responseData.details) {
           errorMessage = `Validation error: ${responseData.details}`;
         }
-      } 
-      // Network errors
-      else if (e?.request) {
+      } else if (e?.request) {
         errorMessage = 'Network error. Please check your internet connection and try again.';
       }
       
