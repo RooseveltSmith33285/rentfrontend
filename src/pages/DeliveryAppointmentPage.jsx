@@ -34,6 +34,7 @@ export default function IntegratedConfirmDeliveryPage() {
   const [userLocation, setUserLocation] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [stairs,setStairs]=useState(false)
   const [showCalendar, setShowCalendar] = useState(false);
   const [totalCost, setTotalCost] = useState(0);
   const [selectedTvSize,setSelectedTvSize]=useState(0)
@@ -635,7 +636,15 @@ export default function IntegratedConfirmDeliveryPage() {
                 <div className="flex items-center gap-2 sm:gap-3">
                   <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-[#024a47]" />
                   <span className="text-base sm:text-lg lg:text-xl font-semibold text-[#024a47]">{selectedTime}</span>
+                
                 </div>
+               <div className="my-2 flex items-center gap-[0.5rem]">
+               <input checked={stairs} onChange={(e)=>{
+                setStairs(e.target.checked)
+               }} className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500 border-gray-300" type="checkbox"/>
+               <span>Do you have Stairs?</span>
+
+               </div>
               </div>
             </div>
 

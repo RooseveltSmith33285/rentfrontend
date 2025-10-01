@@ -197,7 +197,7 @@ navigate('/reset-password')
               <p onClick={()=>{
 navigate('/reset-password')
               }} className='cursor-pointer underline'>
-                Facing issues contact support
+             Support
               </p>
 
       </div>
