@@ -485,7 +485,7 @@ const [draftDayPdf,setDraftDayPdf]=useState()
   };
 
   const handleAccept = () => {
-    setLoading(true)
+    // setLoading(true)
     if (agreedToTerms && hasCustomerSignature && hasLessorSignature && customerName.trim()) {
       const signatureData = {
         customerSignature,
@@ -824,6 +824,567 @@ console.log(e.message)
   );
 };
 
+// export default function BillingDetailsForm() {
+//   const [zipCode, setZipCode] = useState("");
+//   const [saveCard, setSaveCard] = useState(true);
+//   const [draftDay, setDraftDay] = useState(1);
+//   const [showAgreementModal, setShowAgreementModal] = useState(false);
+//   const [isProcessing, setIsProcessing] = useState(false);
+//   const [cardError, setCardError] = useState(null);
+//   const [loading,setLoading]=useState(false)
+//   const [cardState,setCard]=useState({
+//     card:'',
+//     cvc:'',
+//     zip:'',
+//     expirey:''
+//   })
+
+  
+//   const stripe = useStripe();
+//   const elements = useElements();
+//   const navigate = useNavigate();
+
+ 
+//   const elementStyles = {
+//     style: {
+//       base: {
+//         fontSize: '20px',
+//         fontWeight: '600',
+//         color: '#024a47',
+//         fontFamily: 'inherit',
+//         '::placeholder': {
+//           color: '#9ca3af',
+//         },
+//       },
+//     },
+//   };
+
+//   const handleZipCodeChange = (e) => {
+//     const value = e.target.value.replace(/[^0-9]/gi, '');
+//     if (value.length <= 5) {
+//       setZipCode(value);
+//     }
+//   };
+
+
+//   const handleSubmit = async () => {
+//     setIsProcessing(true);
+//     const isValid = await validateForm();
+    
+//     if (isValid) {
+//       setShowAgreementModal(true);
+//     }
+    
+//     setIsProcessing(false);
+//   };
+
+//   // const handleAgreementAccept = async (signatureData) => {
+//   //   try {
+//   //     setLoading(true)
+//   //     const token = localStorage.getItem("token");
+//   //     const headers = { 
+//   //       Authorization: `Bearer ${token}`,
+//   //       'Content-Type': 'application/json'
+//   //     };
+//   //     const { error, paymentMethod } = await stripe.createPaymentMethod({
+//   //       type: 'card',
+//   //       card: elements.getElement(CardNumberElement),
+//   //       billing_details: {
+//   //         address: {
+//   //           postal_code: zipCode,
+//   //         },
+//   //       },
+//   //     });
+
+//   //     const requestData = {
+//   //       paymentMethodId: paymentMethod.id,
+//   //       zipCode,
+//   //       draftDay,
+//   //       saveCard,
+//   //       agreement: {
+//   //         customerName: signatureData.customerName,
+//   //         customerSignature: signatureData.customerSignature,
+//   //         lessorSignature: signatureData.lessorSignature,
+//   //         signedDate: signatureData.signedDate,
+//   //         agreementVersion: '1.0',
+//   //         signatureTimestamp: new Date().toISOString()
+//   //       }
+//   //     };
+      
+//   //     // Parse URL data once
+//   //     const urlParams = new URLSearchParams(window.location.search);
+//   //     const encodedData = urlParams.get('data');
+//   //     const orderData = JSON.parse(decodeURIComponent(encodedData));
+  
+//   //     // Execute both API calls in parallel
+//   //     const [billingResponse, orderResponse] = await Promise.all([
+//   //       axios.post(`${BASE_URL}/storeBilling`, 
+//   //       requestData,
+//   //         { headers }
+//   //       ),
+//   //       axios.post(`${BASE_URL}/createOrder`, 
+//   //         orderData, 
+//   //         { headers }
+//   //       )
+//   //     ]);
+  
+//   //     console.log('Backend responses received:', { 
+//   //       billing: billingResponse.data,
+//   //       order: orderResponse.data 
+//   //     });
+      
+//   //     alert('We are working on your order. Thank you for trusting Rent Simple Deals!');
+//   //     setShowAgreementModal(false);
+//   //     navigate('/confirmation');
+      
+//   //   } catch (e) {
+//   //     setLoading(false)
+//   //     console.error('=== ERROR IN BILLING FORM SUBMISSION ===');
+//   //     console.error('Error timestamp:', new Date().toISOString());
+//   //     console.error('Error object:', e);
+      
+//   //     const errorMessage = e?.response?.data?.error 
+//   //       ? `Error: ${e.response.data.error}`
+//   //       : e?.response 
+//   //         ? 'Server error occurred. Please check the console for details.'
+//   //         : e?.request 
+//   //           ? 'Network error. Please check your internet connection.'
+//   //           : 'An unexpected error occurred. Please try again.';
+      
+//   //     alert(errorMessage);
+//   //   } finally {
+//   //     setIsProcessing(false);
+//   //   }
+//   // };
+
+
+
+//   // const handleAgreementAccept = async (signatureData) => {
+//   //   try {
+//   //     setLoading(true);
+//   //     setIsProcessing(true);
+      
+//   //     const token = localStorage.getItem("token");
+//   //     const headers = { 
+//   //       Authorization: `Bearer ${token}`,
+//   //       'Content-Type': 'application/json'
+//   //     };
+      
+//   //     const { error, paymentMethod } = await stripe.createPaymentMethod({
+//   //       type: 'card',
+//   //       card: elements.getElement(CardNumberElement),
+//   //       billing_details: {
+//   //         address: {
+//   //           postal_code: zipCode,
+//   //         },
+//   //       },
+//   //     });
+
+//   //     // Handle Stripe client-side errors
+//   //     if (error) {
+//   //       toast.error(error.message, { containerId: 'billingPage' });
+//   //       return;
+//   //     }
+
+//   //     const requestData = {
+//   //       paymentMethodId: paymentMethod.id,
+//   //       zipCode,
+//   //       draftDay,
+//   //       saveCard,
+//   //       agreement: {
+//   //         customerName: signatureData.customerName,
+//   //         customerSignature: signatureData.customerSignature,
+//   //         lessorSignature: signatureData.lessorSignature,
+//   //         signedDate: signatureData.signedDate,
+//   //         agreementVersion: '1.0',
+//   //         signatureTimestamp: new Date().toISOString()
+//   //       }
+//   //     };
+      
+//   //     const urlParams = new URLSearchParams(window.location.search);
+//   //     const encodedData = urlParams.get('data');
+//   //     const orderData = JSON.parse(decodeURIComponent(encodedData));
+  
+//   //     // Execute both API calls in parallel
+//   //     const [billingResponse, orderResponse] = await Promise.all([
+//   //       axios.post(`${BASE_URL}/storeBilling`, requestData, { headers }),
+//   //       axios.post(`${BASE_URL}/createOrder`, orderData, { headers })
+//   //     ]);
+  
+//   //     console.log('Backend responses received:', { 
+//   //       billing: billingResponse.data,
+//   //       order: orderResponse.data 
+//   //     });
+      
+//   //     toast.success('We are working on your order. Thank you for trusting Rent Simple Deals!', { 
+//   //       containerId: 'billingPage' 
+//   //     });
+      
+//   //     setShowAgreementModal(false);
+//   //     navigate('/confirmation');
+      
+//   //   } catch (e) {
+//   //     console.error('=== ERROR IN BILLING FORM SUBMISSION ===');
+//   //     console.error('Error timestamp:', new Date().toISOString());
+//   //     console.error('Error object:', e);
+      
+//   //     let errorMessage = 'An unexpected error occurred. Please try again.';
+      
+//   //     // Handle backend response errors
+//   //     if (e?.response?.data) {
+//   //       const responseData = e.response.data;
+        
+//   //       // Payment-specific errors (from your backend)
+//   //       if (responseData.type === 'payment_error') {
+//   //         errorMessage = responseData.error;
+//   //       } 
+//   //       // Other backend errors
+//   //       else if (responseData.error) {
+//   //         errorMessage = responseData.error;
+//   //       }
+//   //       // Validation errors
+//   //       else if (responseData.details) {
+//   //         errorMessage = `Validation error: ${responseData.details}`;
+//   //       }
+//   //     } 
+//   //     // Network errors
+//   //     else if (e?.request) {
+//   //       errorMessage = 'Network error. Please check your internet connection and try again.';
+//   //     }
+      
+//   //     toast.error(errorMessage, { containerId: 'billingPage' });
+      
+//   //   } finally {
+//   //     setLoading(false);
+//   //     setIsProcessing(false);
+//   //   }
+//   // };
+
+
+//   const handleAgreementAccept = async (signatureData) => {
+//     try {
+//       setLoading(true);
+//       setIsProcessing(true);
+      
+//       const token = localStorage.getItem("token");
+//       const headers = { 
+//         Authorization: `Bearer ${token}`,
+//         'Content-Type': 'application/json'
+//       };
+      
+//       const { error, paymentMethod } = await stripe.createPaymentMethod({
+//         type: 'card',
+//         card: elements.getElement(CardNumberElement),
+//         billing_details: {
+//           address: {
+//             postal_code: zipCode,
+//           },
+//         },
+//       });
+  
+//       if (error) {
+//         toast.error(error.message, { containerId: 'billingPage' });
+//         return;
+//       }
+  
+//       const requestData = {
+//         paymentMethodId: paymentMethod.id,
+//         zipCode,
+//         draftDay,
+//         saveCard,
+//         agreement: {
+//           customerName: signatureData.customerName,
+//           customerSignature: signatureData.customerSignature,
+//           lessorSignature: signatureData.lessorSignature,
+//           signedDate: signatureData.signedDate,
+//           agreementVersion: '1.0',
+//           signatureTimestamp: new Date().toISOString()
+//         }
+//       };
+      
+//       const urlParams = new URLSearchParams(window.location.search);
+//       const encodedData = urlParams.get('data');
+//       const orderData = JSON.parse(decodeURIComponent(encodedData));
+  
+//       // STEP 1: Store billing first and WAIT for it to complete
+//       console.log('Storing billing information...');
+//       const billingResponse = await axios.post(
+//         `${BASE_URL}/storeBilling`, 
+//         requestData, 
+//         { headers }
+//       );
+//       console.log('Billing stored successfully:', billingResponse.data);
+  
+//       // STEP 2: Now create the order (paymentMethodToken is saved in DB)
+//       console.log('Creating order...');
+//       const orderResponse = await axios.post(
+//         `${BASE_URL}/createOrder`, 
+//         orderData, 
+//         { headers }
+//       );
+//       console.log('Order created successfully:', orderResponse.data);
+      
+//       toast.success('We are working on your order. Thank you for trusting Rent Simple Deals!', { 
+//         containerId: 'billingPage' 
+//       });
+      
+//       setShowAgreementModal(false);
+//       navigate('/confirmation');
+      
+//     } catch (e) {
+//       console.error('=== ERROR IN BILLING FORM SUBMISSION ===');
+//       console.error('Error timestamp:', new Date().toISOString());
+//       console.error('Error object:', e);
+      
+//       let errorMessage = 'An unexpected error occurred. Please try again.';
+      
+//       if (e?.response?.data) {
+//         const responseData = e.response.data;
+        
+//         if (responseData.type === 'payment_error') {
+//           errorMessage = responseData.error;
+//         } else if (responseData.error) {
+//           errorMessage = responseData.error;
+//         } else if (responseData.details) {
+//           errorMessage = `Validation error: ${responseData.details}`;
+//         }
+//       } else if (e?.request) {
+//         errorMessage = 'Network error. Please check your internet connection and try again.';
+//       }
+      
+//       toast.error(errorMessage, { containerId: 'billingPage' });
+      
+//     } finally {
+//       setLoading(false);
+//       setIsProcessing(false);
+//     }
+//   };
+
+//   const validateForm = async () => {
+//     setCardError(null);
+    
+//     if (!stripe || !elements) {
+//       setCardError("Stripe not loaded yet. Please wait...");
+//       return false;
+//     }
+
+//     const cardNumberElement = elements.getElement(CardNumberElement);
+//     const cardExpiryElement = elements.getElement(CardExpiryElement);
+//     const cardCvcElement = elements.getElement(CardCvcElement);
+
+//     if (!cardNumberElement || !cardExpiryElement || !cardCvcElement) {
+//       setCardError("Payment fields not loaded properly");
+//       return false;
+//     }
+
+   
+//     try {
+      
+//       const { error } = await stripe.createPaymentMethod({
+//         type: 'card',
+//         card: cardNumberElement,
+//         billing_details: {
+//           address: {
+//             postal_code: zipCode,
+//           },
+//         },
+//       });
+
+//       if (error) {
+//         setCardError(error.message);
+//         return false;
+//       }
+
+//       if (zipCode.length === 0) {
+//        toast.error("Please enter zip code",{containerId:"billingPage"})
+//         return false;
+//       }
+
+//       return true;
+//     } catch (error) {
+//       setCardError("Error validating card details");
+//       return false;
+//     }
+//   };
+
+
+//   return (
+//     <>
+//      <ToastContainer containerId={"billingPage"}/>
+
+
+//      <div className="max-w-md mx-auto p-8 bg-[#f9faf5] min-h-screen">
+    
+//     <div className="text-center mb-8">
+//       <div className="mb-4">
+//         <Lock className="w-16 h-16 text-[#024a47] mx-auto" />
+//       </div>
+//       <h1 className="text-3xl font-bold text-[#024a47]">Enter Billing Details</h1>
+//     </div>
+
+   
+//     <div className="mb-6">
+//       <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
+//         <div className="flex items-center gap-3">
+//           <CreditCard className="w-6 h-6 text-[#024a47]" />
+//           <div className="flex-1">
+//           <CardNumberElement
+//               options={elementStyles}
+//               className="w-full text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
+//             />
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+
+    
+//     <div className="mb-6 grid grid-cols-2 gap-4">
+//       <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
+//         <div className="flex items-center gap-3">
+//           <Calendar className="w-6 h-6 text-[#024a47]" />
+//           <div className="flex-1">
+//           <CardExpiryElement
+//               options={elementStyles}
+//               className="w-full text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
+//             />
+//           </div>
+//         </div>
+//       </div>
+//       <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
+//         <div className="flex items-center gap-3">
+//           <MoreHorizontal className="w-6 h-6 text-[#024a47]" />
+//           <div className="flex-1">
+//           <CardCvcElement
+//               options={elementStyles}
+//               className="w-full text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
+//             />
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+
+  
+//     <div className="mb-8">
+//       <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
+//         <div className="flex items-center gap-3">
+//           <div className="w-6 h-6 border-2 border-[#024a47] rounded-sm"></div>
+//           <input
+//             type="text"
+//             value={zipCode}
+//             onChange={handleZipCodeChange}
+//             className="flex-1 text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
+//             placeholder="Zip code"
+//             maxLength="5"
+//           />
+//         </div>
+//       </div>
+//     </div>
+
+
+//     {cardError && (
+//       <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+//         {cardError}
+//       </div>
+//     )}
+
+
+//     <div className="mb-8">
+//       <h3 className="text-xl font-bold text-[#024a47] mb-4">Payment Draft Date</h3>
+//       <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
+//         <div className="flex items-center gap-3">
+//           <Calendar className="w-6 h-6 text-[#024a47]" />
+//           <select
+//             value={draftDay}
+//             onChange={(e) => setDraftDay(parseInt(e.target.value))}
+//             className="flex-1 text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none cursor-pointer"
+//           >
+//             {[...Array(28)].map((_, index) => {
+//               const day = index + 1;
+//               const suffix = day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th';
+//               return (
+//                 <option key={day} value={day}>
+//                   {day}{suffix} of each month
+//                 </option>
+//               );
+//             })}
+//           </select>
+//         </div>
+//       </div>
+//       <p className="text-sm text-gray-600 mt-2 ml-4">
+//         Select the day of the month you'd like payments to be automatically drafted
+//       </p>
+//     </div>
+
+   
+//     <div className="mb-8">
+//       <div className="flex justify-center gap-8 mb-6">
+//         <div className="text-center">
+//           <RefrigeratorIcon />
+//           <p className="text-sm font-medium text-gray-600 mt-2">Refrigerator</p>
+//         </div>
+//         <div className="text-center">
+//           <WasherDryerIcon />
+//           <p className="text-sm font-medium text-gray-600 mt-2">Washer & Dryer</p>
+//         </div>
+//         <div className="text-center">
+//           <DeepFreezerIcon />
+//           <p className="text-sm font-medium text-gray-600 mt-2">Deep Freezer</p>
+//         </div>
+//       </div>
+//     </div>
+
+   
+//     <div className="mb-8">
+//       <label className="flex items-center gap-3 cursor-pointer">
+//         <div 
+//           className={`w-8 h-8 rounded-md border-2 border-[#024a47] flex items-center justify-center ${
+//             saveCard ? 'bg-[#024a47]' : 'bg-white'
+//           }`}
+//           onClick={() => setSaveCard(!saveCard)}
+//         >
+//           {saveCard && <CheckSquare className="w-5 h-5 text-white" />}
+//         </div>
+//         <span className="text-lg font-medium text-[#024a47]">
+//           Save this card for recurring payments
+//         </span>
+//       </label>
+//     </div>
+
+//     <button 
+//       onClick={handleSubmit}
+//       disabled={!stripe || isProcessing}
+//       className={`w-full bg-[#024a47] text-white text-xl font-semibold py-4 rounded-2xl shadow-lg transition-colors ${
+//         !stripe || isProcessing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#035d57]'
+//       }`}
+//     >
+//       {isProcessing ? 'Processing...' : 'Complete Setup'}
+//     </button>
+
+
+//     <div className="mt-4 text-center text-sm text-gray-600">
+//       <div className="flex items-center justify-center gap-2">
+//         <Lock className="w-4 h-4" />
+//         <span>Your card details are secured by Stripe</span>
+//       </div>
+//     </div>
+//   </div>
+
+
+//   <AgreementModal
+//     isOpen={showAgreementModal}
+//     onClose={() => setShowAgreementModal(false)}
+//     onAccept={handleAgreementAccept}
+//     draftDay={draftDay}
+//     loading={loading}
+//     setLoading={setLoading}
+//   />
+//     </>
+//   );
+// }
+
+
+
+
 export default function BillingDetailsForm() {
   const [zipCode, setZipCode] = useState("");
   const [saveCard, setSaveCard] = useState(true);
@@ -831,7 +1392,7 @@ export default function BillingDetailsForm() {
   const [showAgreementModal, setShowAgreementModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [cardError, setCardError] = useState(null);
-  const [loading,setLoading]=useState(false)
+  
   const [cardState,setCard]=useState({
     card:'',
     cvc:'',
@@ -869,265 +1430,46 @@ export default function BillingDetailsForm() {
 
   const handleSubmit = async () => {
     setIsProcessing(true);
-    const isValid = await validateForm();
     
-    if (isValid) {
+  
       setShowAgreementModal(true);
-    }
+
     
     setIsProcessing(false);
   };
 
-  // const handleAgreementAccept = async (signatureData) => {
-  //   try {
-  //     setLoading(true)
-  //     const token = localStorage.getItem("token");
-  //     const headers = { 
-  //       Authorization: `Bearer ${token}`,
-  //       'Content-Type': 'application/json'
-  //     };
-  //     const { error, paymentMethod } = await stripe.createPaymentMethod({
-  //       type: 'card',
-  //       card: elements.getElement(CardNumberElement),
-  //       billing_details: {
-  //         address: {
-  //           postal_code: zipCode,
-  //         },
-  //       },
-  //     });
-
-  //     const requestData = {
-  //       paymentMethodId: paymentMethod.id,
-  //       zipCode,
-  //       draftDay,
-  //       saveCard,
-  //       agreement: {
-  //         customerName: signatureData.customerName,
-  //         customerSignature: signatureData.customerSignature,
-  //         lessorSignature: signatureData.lessorSignature,
-  //         signedDate: signatureData.signedDate,
-  //         agreementVersion: '1.0',
-  //         signatureTimestamp: new Date().toISOString()
-  //       }
-  //     };
-      
-  //     // Parse URL data once
-  //     const urlParams = new URLSearchParams(window.location.search);
-  //     const encodedData = urlParams.get('data');
-  //     const orderData = JSON.parse(decodeURIComponent(encodedData));
-  
-  //     // Execute both API calls in parallel
-  //     const [billingResponse, orderResponse] = await Promise.all([
-  //       axios.post(`${BASE_URL}/storeBilling`, 
-  //       requestData,
-  //         { headers }
-  //       ),
-  //       axios.post(`${BASE_URL}/createOrder`, 
-  //         orderData, 
-  //         { headers }
-  //       )
-  //     ]);
-  
-  //     console.log('Backend responses received:', { 
-  //       billing: billingResponse.data,
-  //       order: orderResponse.data 
-  //     });
-      
-  //     alert('We are working on your order. Thank you for trusting Rent Simple Deals!');
-  //     setShowAgreementModal(false);
-  //     navigate('/confirmation');
-      
-  //   } catch (e) {
-  //     setLoading(false)
-  //     console.error('=== ERROR IN BILLING FORM SUBMISSION ===');
-  //     console.error('Error timestamp:', new Date().toISOString());
-  //     console.error('Error object:', e);
-      
-  //     const errorMessage = e?.response?.data?.error 
-  //       ? `Error: ${e.response.data.error}`
-  //       : e?.response 
-  //         ? 'Server error occurred. Please check the console for details.'
-  //         : e?.request 
-  //           ? 'Network error. Please check your internet connection.'
-  //           : 'An unexpected error occurred. Please try again.';
-      
-  //     alert(errorMessage);
-  //   } finally {
-  //     setIsProcessing(false);
-  //   }
-  // };
-
-
-
-  // const handleAgreementAccept = async (signatureData) => {
-  //   try {
-  //     setLoading(true);
-  //     setIsProcessing(true);
-      
-  //     const token = localStorage.getItem("token");
-  //     const headers = { 
-  //       Authorization: `Bearer ${token}`,
-  //       'Content-Type': 'application/json'
-  //     };
-      
-  //     const { error, paymentMethod } = await stripe.createPaymentMethod({
-  //       type: 'card',
-  //       card: elements.getElement(CardNumberElement),
-  //       billing_details: {
-  //         address: {
-  //           postal_code: zipCode,
-  //         },
-  //       },
-  //     });
-
-  //     // Handle Stripe client-side errors
-  //     if (error) {
-  //       toast.error(error.message, { containerId: 'billingPage' });
-  //       return;
-  //     }
-
-  //     const requestData = {
-  //       paymentMethodId: paymentMethod.id,
-  //       zipCode,
-  //       draftDay,
-  //       saveCard,
-  //       agreement: {
-  //         customerName: signatureData.customerName,
-  //         customerSignature: signatureData.customerSignature,
-  //         lessorSignature: signatureData.lessorSignature,
-  //         signedDate: signatureData.signedDate,
-  //         agreementVersion: '1.0',
-  //         signatureTimestamp: new Date().toISOString()
-  //       }
-  //     };
-      
-  //     const urlParams = new URLSearchParams(window.location.search);
-  //     const encodedData = urlParams.get('data');
-  //     const orderData = JSON.parse(decodeURIComponent(encodedData));
-  
-  //     // Execute both API calls in parallel
-  //     const [billingResponse, orderResponse] = await Promise.all([
-  //       axios.post(`${BASE_URL}/storeBilling`, requestData, { headers }),
-  //       axios.post(`${BASE_URL}/createOrder`, orderData, { headers })
-  //     ]);
-  
-  //     console.log('Backend responses received:', { 
-  //       billing: billingResponse.data,
-  //       order: orderResponse.data 
-  //     });
-      
-  //     toast.success('We are working on your order. Thank you for trusting Rent Simple Deals!', { 
-  //       containerId: 'billingPage' 
-  //     });
-      
-  //     setShowAgreementModal(false);
-  //     navigate('/confirmation');
-      
-  //   } catch (e) {
-  //     console.error('=== ERROR IN BILLING FORM SUBMISSION ===');
-  //     console.error('Error timestamp:', new Date().toISOString());
-  //     console.error('Error object:', e);
-      
-  //     let errorMessage = 'An unexpected error occurred. Please try again.';
-      
-  //     // Handle backend response errors
-  //     if (e?.response?.data) {
-  //       const responseData = e.response.data;
-        
-  //       // Payment-specific errors (from your backend)
-  //       if (responseData.type === 'payment_error') {
-  //         errorMessage = responseData.error;
-  //       } 
-  //       // Other backend errors
-  //       else if (responseData.error) {
-  //         errorMessage = responseData.error;
-  //       }
-  //       // Validation errors
-  //       else if (responseData.details) {
-  //         errorMessage = `Validation error: ${responseData.details}`;
-  //       }
-  //     } 
-  //     // Network errors
-  //     else if (e?.request) {
-  //       errorMessage = 'Network error. Please check your internet connection and try again.';
-  //     }
-      
-  //     toast.error(errorMessage, { containerId: 'billingPage' });
-      
-  //   } finally {
-  //     setLoading(false);
-  //     setIsProcessing(false);
-  //   }
-  // };
-
-
   const handleAgreementAccept = async (signatureData) => {
     try {
-      setLoading(true);
-      setIsProcessing(true);
-      
       const token = localStorage.getItem("token");
       const headers = { 
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
-      
-      const { error, paymentMethod } = await stripe.createPaymentMethod({
-        type: 'card',
-        card: elements.getElement(CardNumberElement),
-        billing_details: {
-          address: {
-            postal_code: zipCode,
-          },
-        },
-      });
   
-      if (error) {
-        toast.error(error.message, { containerId: 'billingPage' });
-        return;
-      }
-  
-      const requestData = {
-        paymentMethodId: paymentMethod.id,
-        zipCode,
-        draftDay,
-        saveCard,
-        agreement: {
-          customerName: signatureData.customerName,
-          customerSignature: signatureData.customerSignature,
-          lessorSignature: signatureData.lessorSignature,
-          signedDate: signatureData.signedDate,
-          agreementVersion: '1.0',
-          signatureTimestamp: new Date().toISOString()
-        }
-      };
-      
+      // Parse URL data once
       const urlParams = new URLSearchParams(window.location.search);
       const encodedData = urlParams.get('data');
       const orderData = JSON.parse(decodeURIComponent(encodedData));
   
-      // STEP 1: Store billing first and WAIT for it to complete
-      console.log('Storing billing information...');
-      const billingResponse = await axios.post(
-        `${BASE_URL}/storeBilling`, 
-        requestData, 
-        { headers }
-      );
-      console.log('Billing stored successfully:', billingResponse.data);
+    
+      // Execute both API calls in parallel
+      const [billingResponse, orderResponse] = await Promise.all([
+        axios.post(`${BASE_URL}/storeBilling`, 
+          { cardState, draftDay }, 
+          { headers }
+        ),
+        axios.post(`${BASE_URL}/createOrder`, 
+          orderData, 
+          { headers }
+        )
+      ]);
   
-      // STEP 2: Now create the order (paymentMethodToken is saved in DB)
-      console.log('Creating order...');
-      const orderResponse = await axios.post(
-        `${BASE_URL}/createOrder`, 
-        orderData, 
-        { headers }
-      );
-      console.log('Order created successfully:', orderResponse.data);
-      
-      toast.success('We are working on your order. Thank you for trusting Rent Simple Deals!', { 
-        containerId: 'billingPage' 
+      console.log('Backend responses received:', { 
+        billing: billingResponse.data,
+        order: orderResponse.data 
       });
       
+      alert('We are working on your order. Thank you for trusting Rent Simple Deals!');
       setShowAgreementModal(false);
       navigate('/confirmation');
       
@@ -1136,248 +1478,203 @@ export default function BillingDetailsForm() {
       console.error('Error timestamp:', new Date().toISOString());
       console.error('Error object:', e);
       
-      let errorMessage = 'An unexpected error occurred. Please try again.';
+      const errorMessage = e?.response?.data?.error 
+        ? `Error: ${e.response.data.error}`
+        : e?.response 
+          ? 'Server error occurred. Please check the console for details.'
+          : e?.request 
+            ? 'Network error. Please check your internet connection.'
+            : 'An unexpected error occurred. Please try again.';
       
-      if (e?.response?.data) {
-        const responseData = e.response.data;
-        
-        if (responseData.type === 'payment_error') {
-          errorMessage = responseData.error;
-        } else if (responseData.error) {
-          errorMessage = responseData.error;
-        } else if (responseData.details) {
-          errorMessage = `Validation error: ${responseData.details}`;
-        }
-      } else if (e?.request) {
-        errorMessage = 'Network error. Please check your internet connection and try again.';
-      }
-      
-      toast.error(errorMessage, { containerId: 'billingPage' });
-      
+      alert(errorMessage);
     } finally {
-      setLoading(false);
       setIsProcessing(false);
     }
   };
 
-  const validateForm = async () => {
-    setCardError(null);
-    
-    if (!stripe || !elements) {
-      setCardError("Stripe not loaded yet. Please wait...");
-      return false;
-    }
-
-    const cardNumberElement = elements.getElement(CardNumberElement);
-    const cardExpiryElement = elements.getElement(CardExpiryElement);
-    const cardCvcElement = elements.getElement(CardCvcElement);
-
-    if (!cardNumberElement || !cardExpiryElement || !cardCvcElement) {
-      setCardError("Payment fields not loaded properly");
-      return false;
-    }
-
-   
-    try {
-      
-      const { error } = await stripe.createPaymentMethod({
-        type: 'card',
-        card: cardNumberElement,
-        billing_details: {
-          address: {
-            postal_code: zipCode,
-          },
-        },
-      });
-
-      if (error) {
-        setCardError(error.message);
-        return false;
-      }
-
-      if (zipCode.length === 0) {
-       toast.error("Please enter zip code",{containerId:"billingPage"})
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      setCardError("Error validating card details");
-      return false;
-    }
-  };
-
-
   return (
     <>
-     <ToastContainer containerId={"billingPage"}/>
-
-
-     <div className="max-w-md mx-auto p-8 bg-[#f9faf5] min-h-screen">
+      <div className="max-w-md mx-auto p-8 bg-[#f9faf5] min-h-screen">
     
-    <div className="text-center mb-8">
-      <div className="mb-4">
-        <Lock className="w-16 h-16 text-[#024a47] mx-auto" />
-      </div>
-      <h1 className="text-3xl font-bold text-[#024a47]">Enter Billing Details</h1>
-    </div>
+        <div className="text-center mb-8">
+          <div className="mb-4">
+            <Lock className="w-16 h-16 text-[#024a47] mx-auto" />
+          </div>
+          <h1 className="text-3xl font-bold text-[#024a47]">Enter Billing Details</h1>
+        </div>
 
-   
-    <div className="mb-6">
-      <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
-        <div className="flex items-center gap-3">
-          <CreditCard className="w-6 h-6 text-[#024a47]" />
-          <div className="flex-1">
-          <CardNumberElement
-              options={elementStyles}
-              className="w-full text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
-            />
+       
+        <div className="mb-6">
+          <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <CreditCard className="w-6 h-6 text-[#024a47]" />
+              <div className="flex-1">
+                <input type="text"
+                placeholder="Card Number"
+                    onChange={(e)=>{
+                     setCard({
+                      ...cardState,
+                      card:e.target.value
+                     })
+                     }}
+                     value={cardState.card}
+
+                  className="w-full text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
+                />
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+
+        
+        <div className="mb-6 grid grid-cols-2 gap-4">
+          <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Calendar className="w-6 h-6 text-[#024a47]" />
+              <div className="flex-1">
+                <input
+                 placeholder="Card Expiray"
+                      onChange={(e)=>{
+                  setCard({
+                    ...cardState,
+                    expirey:e.target.value
+                  })
+                 }}
+                 value={cardState.expirey}
+                  className="w-full text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <MoreHorizontal className="w-6 h-6 text-[#024a47]" />
+              <div className="flex-1">
+                <input type="text"
+                 placeholder="CVC"
+                       onChange={(e)=>{
+                        setCard({
+                          ...cardState,
+                          cvc:e.target.value
+                        })
+                       }}
+                       value={cardState.cvc}
+                  className="w-full text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+      
+        <div className="mb-8">
+          <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 border-2 border-[#024a47] rounded-sm"></div>
+              <input
+                type="text"
+                value={zipCode}
+                onChange={handleZipCodeChange}
+                className="flex-1 text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
+                placeholder="Zip code"
+                maxLength="5"
+              />
+            </div>
+          </div>
+        </div>
 
     
-    <div className="mb-6 grid grid-cols-2 gap-4">
-      <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
-        <div className="flex items-center gap-3">
-          <Calendar className="w-6 h-6 text-[#024a47]" />
-          <div className="flex-1">
-          <CardExpiryElement
-              options={elementStyles}
-              className="w-full text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
-            />
+     
+
+    
+        <div className="mb-8">
+          <h3 className="text-xl font-bold text-[#024a47] mb-4">Payment Draft Date</h3>
+          <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Calendar className="w-6 h-6 text-[#024a47]" />
+              <select
+                value={draftDay}
+                onChange={(e) => setDraftDay(parseInt(e.target.value))}
+                className="flex-1 text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none cursor-pointer"
+              >
+                {[...Array(28)].map((_, index) => {
+                  const day = index + 1;
+                  const suffix = day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th';
+                  return (
+                    <option key={day} value={day}>
+                      {day}{suffix} of each month
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          </div>
+          <p className="text-sm text-gray-600 mt-2 ml-4">
+            Select the day of the month you'd like payments to be automatically drafted
+          </p>
+        </div>
+
+       
+        <div className="mb-8">
+          <div className="flex justify-center gap-8 mb-6">
+            <div className="text-center">
+              <RefrigeratorIcon />
+              <p className="text-sm font-medium text-gray-600 mt-2">Refrigerator</p>
+            </div>
+            <div className="text-center">
+              <WasherDryerIcon />
+              <p className="text-sm font-medium text-gray-600 mt-2">Washer & Dryer</p>
+            </div>
+            <div className="text-center">
+              <DeepFreezerIcon />
+              <p className="text-sm font-medium text-gray-600 mt-2">Deep Freezer</p>
+            </div>
           </div>
         </div>
-      </div>
-      <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
-        <div className="flex items-center gap-3">
-          <MoreHorizontal className="w-6 h-6 text-[#024a47]" />
-          <div className="flex-1">
-          <CardCvcElement
-              options={elementStyles}
-              className="w-full text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
-            />
-          </div>
+
+       
+        <div className="mb-8">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <div 
+              className={`w-8 h-8 rounded-md border-2 border-[#024a47] flex items-center justify-center ${
+                saveCard ? 'bg-[#024a47]' : 'bg-white'
+              }`}
+              onClick={() => setSaveCard(!saveCard)}
+            >
+              {saveCard && <CheckSquare className="w-5 h-5 text-white" />}
+            </div>
+            <span className="text-lg font-medium text-[#024a47]">
+              Save this card for recurring payments
+            </span>
+          </label>
         </div>
-      </div>
-    </div>
 
-  
-    <div className="mb-8">
-      <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-6 h-6 border-2 border-[#024a47] rounded-sm"></div>
-          <input
-            type="text"
-            value={zipCode}
-            onChange={handleZipCodeChange}
-            className="flex-1 text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
-            placeholder="Zip code"
-            maxLength="5"
-          />
-        </div>
-      </div>
-    </div>
-
-
-    {cardError && (
-      <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-        {cardError}
-      </div>
-    )}
-
-
-    <div className="mb-8">
-      <h3 className="text-xl font-bold text-[#024a47] mb-4">Payment Draft Date</h3>
-      <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
-        <div className="flex items-center gap-3">
-          <Calendar className="w-6 h-6 text-[#024a47]" />
-          <select
-            value={draftDay}
-            onChange={(e) => setDraftDay(parseInt(e.target.value))}
-            className="flex-1 text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none cursor-pointer"
-          >
-            {[...Array(28)].map((_, index) => {
-              const day = index + 1;
-              const suffix = day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th';
-              return (
-                <option key={day} value={day}>
-                  {day}{suffix} of each month
-                </option>
-              );
-            })}
-          </select>
-        </div>
-      </div>
-      <p className="text-sm text-gray-600 mt-2 ml-4">
-        Select the day of the month you'd like payments to be automatically drafted
-      </p>
-    </div>
-
-   
-    <div className="mb-8">
-      <div className="flex justify-center gap-8 mb-6">
-        <div className="text-center">
-          <RefrigeratorIcon />
-          <p className="text-sm font-medium text-gray-600 mt-2">Refrigerator</p>
-        </div>
-        <div className="text-center">
-          <WasherDryerIcon />
-          <p className="text-sm font-medium text-gray-600 mt-2">Washer & Dryer</p>
-        </div>
-        <div className="text-center">
-          <DeepFreezerIcon />
-          <p className="text-sm font-medium text-gray-600 mt-2">Deep Freezer</p>
-        </div>
-      </div>
-    </div>
-
-   
-    <div className="mb-8">
-      <label className="flex items-center gap-3 cursor-pointer">
-        <div 
-          className={`w-8 h-8 rounded-md border-2 border-[#024a47] flex items-center justify-center ${
-            saveCard ? 'bg-[#024a47]' : 'bg-white'
+        <button 
+          onClick={handleSubmit}
+         
+          className={`w-full bg-[#024a47] text-white text-xl font-semibold py-4 rounded-2xl shadow-lg transition-colors ${
+          'hover:bg-[#035d57]'
           }`}
-          onClick={() => setSaveCard(!saveCard)}
         >
-          {saveCard && <CheckSquare className="w-5 h-5 text-white" />}
+          {isProcessing ? 'Processing...' : 'Complete Setup'}
+        </button>
+
+    
+        <div className="mt-4 text-center text-sm text-gray-600">
+          <div className="flex items-center justify-center gap-2">
+            <Lock className="w-4 h-4" />
+            <span>Your card details are secured by Stripe</span>
+          </div>
         </div>
-        <span className="text-lg font-medium text-[#024a47]">
-          Save this card for recurring payments
-        </span>
-      </label>
-    </div>
-
-    <button 
-      onClick={handleSubmit}
-      disabled={!stripe || isProcessing}
-      className={`w-full bg-[#024a47] text-white text-xl font-semibold py-4 rounded-2xl shadow-lg transition-colors ${
-        !stripe || isProcessing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#035d57]'
-      }`}
-    >
-      {isProcessing ? 'Processing...' : 'Complete Setup'}
-    </button>
-
-
-    <div className="mt-4 text-center text-sm text-gray-600">
-      <div className="flex items-center justify-center gap-2">
-        <Lock className="w-4 h-4" />
-        <span>Your card details are secured by Stripe</span>
       </div>
-    </div>
-  </div>
 
-
-  <AgreementModal
-    isOpen={showAgreementModal}
-    onClose={() => setShowAgreementModal(false)}
-    onAccept={handleAgreementAccept}
-    draftDay={draftDay}
-    loading={loading}
-    setLoading={setLoading}
-  />
+   
+      <AgreementModal
+        isOpen={showAgreementModal}
+        onClose={() => setShowAgreementModal(false)}
+        onAccept={handleAgreementAccept}
+        draftDay={draftDay}
+      />
     </>
   );
 }
