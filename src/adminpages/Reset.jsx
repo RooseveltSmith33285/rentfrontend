@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { BASE_URL } from '../baseUrl';
 
-export default function AdminLogin() {
+export default function AdminReset() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -42,15 +42,21 @@ const navigate=useNavigate();
     }
 
     setLoading(true);
-   
+    if(email.length==0){
+alert("Please enter email")
+return;
+    }else if(password.length==0){
+        alert("Please enter password")
+        return;
+    }
 
 try{
-    await axios.post(`${BASE_URL}/loginAdmin`,{email,password})
+    await axios.patch(`${BASE_URL}/resetAdmin`,{email,password})
 setTimeout(() => {
     console.log('Email:', email);
     console.log('Password:', password);
     console.log('Remember me:', rememberMe);
-    alert('Login successful!');
+    alert('Reset successful!');
     setLoading(false);
     setEmail('');
     setPassword('');
@@ -59,14 +65,14 @@ setTimeout(() => {
       email,
       password
     }
-    localStorage.setItem("adminToken",JSON.stringify(data))
-    navigate('/admin')
+    
+    navigate('/adminlogin')
   }, 1500);
 }catch(e){
     if(e?.response?.data?.error){
         alert(e?.response?.data?.error)
     }else{
-        alert("Error while trying to login")
+        alert("Error while trying to reset")
     }
 }
 
@@ -85,7 +91,7 @@ setTimeout(() => {
             </div>
           </div>
           <h1 className="text-3xl font-bold text-gray-800">Admin Panel</h1>
-          <p className="text-gray-500 text-sm mt-2">Secure Login</p>
+          <p className="text-gray-500 text-sm mt-2">Secure Reset</p>
         </div>
 
         {/* Form */}
@@ -153,19 +159,12 @@ setTimeout(() => {
             disabled={loading}
             className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold py-2 rounded-lg hover:from-purple-700 hover:to-purple-800 transition transform hover:scale-105 active:scale-100 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? 'Resetting...' : 'Reset'}
           </button>
         </form>
 
         {/* Footer */}
-        <div className="text-center mt-6 text-sm text-gray-600">
-          <p>
-            Forgot password?{' '}
-            <a href="/adminreset" className="text-purple-600 hover:text-purple-700 font-medium transition">
-              Reset password
-            </a>
-          </p>
-        </div>
+    
       </div>
     </div>
   );

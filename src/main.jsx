@@ -37,6 +37,7 @@ import AdminInventoryManagement from './adminpages/Inventorymanagement.jsx'
 import AdminAnalytics from './adminpages/Analytics.jsx'
 import AdminNotifications from './adminpages/Notifications.jsx'
 import Middleware from './adminpages/Middleware.jsx'
+import AdminReset from './adminpages/Reset.jsx'
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_SECRET);
 
@@ -63,6 +64,7 @@ createRoot(document.getElementById('root')).render(
           
           {/* Admin Login Route (Public) */}
           <Route path="/adminlogin" element={<AdminLogin/>} />
+          <Route path="/adminreset" element={<AdminReset/>} />
           
           {/* Admin Routes (Protected) */}
           <Route element={<Middleware />}>
