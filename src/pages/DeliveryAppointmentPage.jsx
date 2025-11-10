@@ -649,10 +649,12 @@ export default function IntegratedConfirmDeliveryPage() {
             </div>
 
         
-            <div className="mb-4 sm:mb-6">
+
+<div className="mb-4 sm:mb-6">
               <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1">
+          
                     <span className="text-[#024a47] w-[80%] font-semibold text-sm sm:text-base lg:text-lg">Delivery time - $25 flat fee for a single rental item
 
 Free for two or more rental items</span>
@@ -676,6 +678,11 @@ Free for two or more rental items</span>
                 <TimeSlots />
               </div>
             )}
+
+<span className="text-[red] w-[80%] font-semibold text-sm sm:text-base lg:text-lg">Delivery time - $25 flat fee for a single rental item
+
+After your payment is verified, please allow up to 72 hours for us to process your order before delivery.
+</span>
 
          
             <button 
@@ -758,14 +765,14 @@ Free for two or more rental items</span>
               <div>
                 <h3 className="text-sm sm:text-base font-medium text-[#4a9b8e] mb-1">Delivery</h3>
                 <p className="text-xs sm:text-sm text-[#4a9b8e]"><p>
-                Standard Delivery & Installation fee 
-	•	A $25 flat-rate delivery fee applies if the user selects only one rental item.
-	•	Delivery becomes free if the user selects two or more rental items.
+                A $25 flat-rate delivery fee applies when renting a single item.
+
+Free delivery is automatically included when renting two or more items.
                   </p></p>
               </div>
-              <div className="bg-[#024a47] text-white px-3 py-1 rounded-full">
+           {cartItems?.length>1?   <div className="bg-[#024a47] text-white px-3 py-1 rounded-full">
                 <span className="text-xs sm:text-sm font-medium">Free</span>
-              </div>
+              </div>:''}
             </div>
 
             {!showDeliverySchedule && (

@@ -38,6 +38,22 @@ import AdminAnalytics from './adminpages/Analytics.jsx'
 import AdminNotifications from './adminpages/Notifications.jsx'
 import Middleware from './adminpages/Middleware.jsx'
 import AdminReset from './adminpages/Reset.jsx'
+import VendorDashboard from './pages/Vendordashboard.jsx'
+import SubscriptionComponent from './pages/SubscriptionComponent.jsx'
+import FeedDisplay from './pages/FeedDisplay.jsx'
+import BoostingInterface from './pages/Boostinginterface.jsx'
+import CommunityComposer from './pages/CommunityComposer.jsx'
+import ListingCreationFlow from './pages/Listeningcreation.jsx'
+import VendorLogin from './vendor/vendorlogin.jsx'
+import VendorSignup from './vendor/vendorsignup.jsx'
+import VendorResetPassword from './vendor/vendorresetpassword.jsx'
+import CommunityPostPage from './vendor/communitypage.jsx'
+import VendorFeed from './vendor/vendorfeed.jsx'
+import UpdateListing from './vendor/updatelistening.jsx'
+import BoostListingPage from './vendor/boost.jsx'
+import ChatPage from './vendor/chat.jsx'
+import VendorCommunityFeed from './vendor/feed.jsx'
+import IndividualPostPage from './vendor/indivisualpost.jsx'
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_SECRET);
 
@@ -53,6 +69,8 @@ createRoot(document.getElementById('root')).render(
           <Route path="/refrigerator" element={<RefrigeratorTroubleshooting />} />
           <Route path="/dryer" element={<DryerTroubleshooting />} />
           <Route path="/washer" element={<WasherTroubleshooting />} />
+          <Route path='/listening' element={<ListingCreationFlow/>}/>
+          <Route path='/listings/edit/:id' element={<UpdateListing/>}/>
           <Route path="/tv" element={<TVTroubleshooting />} />
           <Route path="/billing" element={<BillingDetailsForm/>} />
           <Route path="/delivery" element={<DeliveryAppointmentPage />} />
@@ -61,11 +79,17 @@ createRoot(document.getElementById('root')).render(
           <Route path="/reset-password" element={<Resetpassword/>} />
           <Route path="/confirmation" element={<OrderConfirmation/>} />
           <Route path="/contact" element={<ContactSupport/>} />
-          
+          <Route path='/vendordashboard' element={<VendorDashboard/>}/>
+          <Route path='/community/:id' element={<IndividualPostPage/>}/>
+        <Route path='/feeddisplay' element={<FeedDisplay/>}/>
+          <Route path='/subscription' element={<SubscriptionComponent/>}/>
           {/* Admin Login Route (Public) */}
           <Route path="/adminlogin" element={<AdminLogin/>} />
           <Route path="/adminreset" element={<AdminReset/>} />
-          
+          <Route path='/boostinginterface' element={<BoostingInterface/>}/>
+          <Route path='/community' element={<CommunityPostPage/>  }/>
+          <Route path='/mylistenings' element={<VendorFeed/>}/>
+          <Route path='/feed' element={<VendorCommunityFeed/>}/>
           {/* Admin Routes (Protected) */}
           <Route element={<Middleware />}>
             <Route path="/admin" element={<AdminApp />}>
@@ -77,6 +101,11 @@ createRoot(document.getElementById('root')).render(
               <Route path="analytics" element={<AdminAnalytics />} />
               <Route path="notifications" element={<AdminNotifications />} />
             </Route>
+<Route path='/chat' element={<ChatPage/>}/>
+<Route path='/boost' element={<BoostListingPage/>}/>
+            <Route path='/vendorlogin' element={<VendorLogin/>}/>
+            <Route path='/vendorregister' element={<VendorSignup/>}/>
+            <Route path='/vendorreset' element={<VendorResetPassword/>}/>
           </Route>
         </Routes>
       </BrowserRouter>
