@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Lock, Eye, EyeOff, Key } from "lucide-react";
+import { Lock, Eye, EyeOff, Mail } from "lucide-react";
 import { ToastContainer, toast } from 'react-toastify';
 import axios from 'axios';
 import { BASE_URL } from '../baseUrl';
@@ -12,7 +12,7 @@ function VendorResetPassword() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [formData, setFormData] = useState({
-    token: '',
+    email: '',
     password: '',
     confirmPassword: ''
   });
@@ -28,8 +28,16 @@ function VendorResetPassword() {
   const handleResetPassword = async (e) => {
     e.preventDefault();
 
-    if (!formData.token || !formData.password) {
+    // Validation
+    if (!formData.email || !formData.password) {
       toast.error('Please fill in all fields', { containerId: 'resetPasswordPage' });
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error('Please provide a valid email address', { containerId: 'resetPasswordPage' });
       return;
     }
 
@@ -45,8 +53,8 @@ function VendorResetPassword() {
 
     setLoading(true);
     try {
-      const response = await axios.post(`${BASE_URL}/auth/vendor/reset-password`, {
-        token: formData.token,
+      const response = await axios.post(`${BASE_URL}/vendor/reset-password`, {
+        email: formData.email,
         password: formData.password
       });
       
@@ -87,22 +95,19 @@ function VendorResetPassword() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Reset Token *
+                  Email Address *
                 </label>
                 <div className="relative">
-                  <Key className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+                  <Mail className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
                   <input
-                    type="text"
-                    name="token"
-                    value={formData.token}
+                    type="email"
+                    name="email"
+                    value={formData.email}
                     onChange={handleInputChange}
-                    placeholder="Enter token from email"
+                    placeholder="Enter your email"
                     className="w-full pl-10 pr-4 py-3 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#024a47]"
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Check your email for the reset token
-                </p>
               </div>
 
               <div>
