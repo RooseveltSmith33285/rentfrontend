@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Package, Eye, MessageSquare, DollarSign, Home, LogOut, Plus, TrendingUp, Users, BarChart3, CreditCard, MessageCircle, Share } from "lucide-react";
+import { Package, Eye, MessageSquare, DollarSign, Home, LogOut, Plus, TrendingUp, Users, BarChart3, CreditCard, MessageCircle, Share, House } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from 'axios';
 import { BASE_URL } from "../baseUrl";
@@ -221,6 +221,17 @@ function VendorDashboard() {
               <p className="text-sm opacity-75">Increase visibility</p>
             </div>
           </button>
+
+          <button
+            onClick={() => navigate('/requestlist')}
+            className="bg-[#024a47] hover:bg-[#035d59] text-white rounded-lg p-6 flex items-center space-x-4 transition-all shadow-md"
+          >
+            <House className="w-8 h-8" />
+            <div className="text-left">
+              <h3 className="font-semibold text-lg">View renter requests</h3>
+            </div>
+          </button>
+
           <button
             onClick={() => navigate('/feed')}
             className="bg-white hover:bg-gray-50 text-[#024a47] border-2 border-[#024a47] rounded-lg p-6 flex items-center space-x-4 transition-all shadow-md"

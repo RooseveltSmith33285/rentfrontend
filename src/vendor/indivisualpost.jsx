@@ -6,10 +6,11 @@ function IndividualPostPage() {
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
   const [loading, setLoading] = useState(true);
-  const [loadingComments, setLoadingComments] = useState(false);
   const [error, setError] = useState('');
   const [currentVendorId, setCurrentVendorId] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
+
+const [currentVendor, setCurrentVendor] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
 
   // Get post ID from URL (e.g., /community/post/:id)
@@ -25,7 +26,7 @@ function IndividualPostPage() {
   useEffect(() => {
     fetchCurrentVendor();
     fetchPost();
-    fetchComments();
+ 
   }, [postId]);
 
   const fetchCurrentVendor = async () => {
@@ -36,10 +37,12 @@ function IndividualPostPage() {
       });
       const data = await response.json();
       setCurrentVendorId(data.vendor._id);
+      setCurrentVendor(data.vendor);
     } catch (err) {
       console.error('Error fetching vendor:', err);
     }
   };
+
 
   const fetchPost = async () => {
     setLoading(true);
@@ -51,16 +54,17 @@ function IndividualPostPage() {
       const response = await fetch(`${BASE_URL}/community/posts/${postId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-
+  
       const data = await response.json();
-
-    console.log(data)
+  
+      console.log(data);
       if (data.success) {
         setPost(data.post);
+        setComments(data.post.comments || []); // Set comments from post
       } else {
         setError(data.error || 'Post not found');
       }
-
+  
     } catch (err) {
       console.error('Fetch post error:', err);
       setError('Failed to load post');
@@ -69,28 +73,8 @@ function IndividualPostPage() {
     }
   };
 
-  const fetchComments = async () => {
-    setLoadingComments(true);
-    
-    try {
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`${BASE_URL}/community/posts/${postId}/comments`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
 
-      const data = await response.json();
-
-      if (data.success) {
-        setComments(data.comments || []);
-      }
-
-    } catch (err) {
-      console.error('Fetch comments error:', err);
-    } finally {
-      setLoadingComments(false);
-    }
-  };
+ 
 
   const handleLike = async () => {
     try {
@@ -140,42 +124,55 @@ function IndividualPostPage() {
     }
   };
 
-  const handleComment = async () => {
-    if (!commentText.trim()) return;
+const handleComment = async () => {
+  if (!commentText.trim()) return;
 
-    try {
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`${BASE_URL}/community/posts/${postId}/comments`, {
-        method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+  try {
+    const token = localStorage.getItem('token');
+    
+    const response = await fetch(`${BASE_URL}/community/posts/${postId}/comments`, {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ text: commentText })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Create comment object with current vendor info
+      const newComment = {
+        _id: data.comment._id || Date.now().toString(),
+        text: commentText,
+        user: {
+          _id: currentVendorId,
+          businessName: currentVendor.businessName,
+          name: currentVendor.name
         },
-        body: JSON.stringify({ text: commentText })
-      });
+        createdAt: new Date().toISOString()
+      };
 
-      const data = await response.json();
-
-      if (data.success) {
-        setComments(prev => [data.comment, ...prev]);
-        setPost(prev => ({
-          ...prev,
-          engagement: { 
-            ...prev.engagement, 
-            comments: data.totalComments || prev.engagement.comments + 1 
-          }
-        }));
-        setCommentText('');
-        setSuccessMessage('Comment added successfully!');
-        setTimeout(() => setSuccessMessage(''), 3000);
-      }
-
-    } catch (err) {
-      console.error('Comment error:', err);
-      setError('Failed to add comment');
+      setComments(prev => [newComment, ...prev]);
+      setPost(prev => ({
+        ...prev,
+        engagement: { 
+          ...prev.engagement, 
+          comments: (prev.engagement?.comments || 0) + 1 
+        }
+      }));
+      setCommentText('');
+      setSuccessMessage('Comment added successfully!');
+      setTimeout(() => setSuccessMessage(''), 3000);
     }
-  };
+
+  } catch (err) {
+    console.error('Comment error:', err);
+    setError('Failed to add comment');
+  }
+};
+
 
   const handleDeleteComment = async (commentId) => {
     if (!window.confirm('Delete this comment?')) return;
@@ -595,17 +592,14 @@ const isLiked = post.likes?.some(like => {
         </div>
 
         {/* Comments Section */}
-        <div className="bg-white rounded-lg shadow-lg p-6">
+       {/* Comments Section */}
+       <div className="bg-white rounded-lg shadow-lg p-6">
           <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             <MessageCircle className="w-6 h-6 text-[#024a47]" />
             Comments ({comments.length})
           </h3>
 
-          {loadingComments ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#024a47]"></div>
-            </div>
-          ) : comments.length > 0 ? (
+          {comments.length > 0 ? (
             <div className="space-y-4">
               {comments.map(comment => {
                 const isCommentOwner = comment.user?._id === currentVendorId;
@@ -614,7 +608,7 @@ const isLiked = post.likes?.some(like => {
                   <div key={comment._id} className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                     <div className="flex items-start gap-3">
                       <div className="w-10 h-10 bg-[#024a47] rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
-                        {comment.user?.businessName?.charAt(0)?.toUpperCase() || 'V'}
+                        {(comment.user?.businessName || comment.user?.name)?.charAt(0)?.toUpperCase() || 'V'}
                       </div>
                       
                       <div className="flex-1">
@@ -622,7 +616,7 @@ const isLiked = post.likes?.some(like => {
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="font-semibold text-gray-900">
-                                {comment.user?.businessName || 'Vendor'}
+                                {comment.user?.businessName || comment.user?.name || 'Anonymous'}
                               </span>
                               {isCommentOwner && (
                                 <span className="text-xs bg-[#024a47] text-white px-2 py-0.5 rounded">

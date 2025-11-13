@@ -15,8 +15,9 @@ function VendorCommunityFeed() {
   const [commentText, setCommentText] = useState({});
   const [showDropdown, setShowDropdown] = useState(null);
   const [currentVendorId, setCurrentVendorId] = useState(null);
-  const [postComments, setPostComments] = useState({});
-  const [loadingComments, setLoadingComments] = useState({});
+  const [currentVendor,setCurrentVendor]=useState({})
+ 
+
 
   const observer = useRef();
   const lastPostRef = useCallback(node => {
@@ -54,7 +55,9 @@ function VendorCommunityFeed() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
+      console.log("CURRENT PROFILE")
       setCurrentVendorId(data.vendor._id);
+      setCurrentVendor(data.vendor)
     } catch (err) {
       console.error('Error fetching vendor:', err);
     }
@@ -83,7 +86,8 @@ function VendorCommunityFeed() {
       });
 
       const data = await response.json();
-
+console.log("DATA")
+console.log(data)
       if (data.success) {
         const newPosts = data.feedItems || [];
         
@@ -193,7 +197,7 @@ function VendorCommunityFeed() {
   const handleComment = async (postId) => {
     const text = commentText[postId]?.trim();
     if (!text) return;
-
+  
     try {
       const token = localStorage.getItem('token');
       
@@ -205,33 +209,40 @@ function VendorCommunityFeed() {
         },
         body: JSON.stringify({ text })
       });
-
+  
       const data = await response.json();
-
+  
       if (data.success) {
-        // Update post engagement
+        // Create comment object with current vendor info
+        const newComment = {
+          _id: data.comment._id || Date.now().toString(),
+          text: text,
+          user: {
+            _id: currentVendorId,
+            businessName: currentVendor.businessName,
+            name: currentVendor.name
+          },
+          createdAt: new Date().toISOString()
+        };
+  
+        // Update posts with new comment
         setPosts(prev => prev.map(p => 
           p._id === postId 
             ? { 
                 ...p, 
+                comments: [newComment, ...(p.comments || [])],
                 engagement: { 
                   ...p.engagement, 
-                  comments: data.totalComments || p.engagement.comments + 1 
+                  comments: (p.comments?.length || 0) + 1
                 }
               }
             : p
         ));
         
-        // Add new comment to comments list
-        setPostComments(prev => ({
-          ...prev,
-          [postId]: [data.comment, ...(prev[postId] || [])]
-        }));
-        
         // Clear input
         setCommentText(prev => ({ ...prev, [postId]: '' }));
       }
-
+  
     } catch (err) {
       console.error('Comment error:', err);
       setError('Failed to add comment');
@@ -240,7 +251,7 @@ function VendorCommunityFeed() {
 
   const handleDeleteComment = async (postId, commentId) => {
     if (!window.confirm('Delete this comment?')) return;
-
+  
     try {
       const token = localStorage.getItem('token');
       
@@ -248,35 +259,31 @@ function VendorCommunityFeed() {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-
+  
       const data = await response.json();
-
+  
       if (data.success) {
-        // Remove comment from list
-        setPostComments(prev => ({
-          ...prev,
-          [postId]: (prev[postId] || []).filter(c => c._id !== commentId)
-        }));
-        
-        // Update engagement count
+        // Update posts to remove comment
         setPosts(prev => prev.map(p => 
           p._id === postId 
             ? { 
                 ...p, 
+                comments: (p.comments || []).filter(c => c._id !== commentId),
                 engagement: { 
                   ...p.engagement, 
-                  comments: data.totalComments || p.engagement.comments - 1 
+                  comments: (p.comments?.length || 1) - 1
                 }
               }
             : p
         ));
       }
-
+  
     } catch (err) {
       console.error('Delete comment error:', err);
       setError('Failed to delete comment');
     }
   };
+
 
   const handleShare = async (postId) => {
     try {
@@ -328,9 +335,6 @@ function VendorCommunityFeed() {
       setShowComments(null);
     } else {
       setShowComments(postId);
-      if (!postComments[postId]) {
-        fetchComments(postId);
-      }
     }
   };
 
@@ -466,7 +470,7 @@ function VendorCommunityFeed() {
             const TypeIcon = typeInfo.icon;
             const isOwnPost = post.vendor?._id === currentVendorId;
             const isLiked = post.likes?.some(like => like.user === currentVendorId);
-            const comments = postComments[post._id] || [];
+            const comments = post.comments || [];
 
             const colors = {
               gray: '#6B7280',
@@ -518,7 +522,7 @@ function VendorCommunityFeed() {
                     </div>
 
                     {/* Actions Menu (only for own posts) */}
-                    {isOwnPost && (
+                    {/* {isOwnPost && (
                       <div className="relative">
                         <button
                           onClick={() => setShowDropdown(showDropdown === post._id ? null : post._id)}
@@ -556,7 +560,7 @@ function VendorCommunityFeed() {
                           </>
                         )}
                       </div>
-                    )}
+                    )} */}
                   </div>
                 </div>
 
@@ -670,44 +674,43 @@ function VendorCommunityFeed() {
 
                     {/* Comments List */}
                     <div className="px-4 pb-4 max-h-96 overflow-y-auto">
-                      {loadingComments[post._id] ? (
-                        <div className="flex justify-center py-4">
-                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#024a47]"></div>
-                        </div>
-                      ) : comments.length > 0 ? (
+                      {post?.comments?.length > 0 ? (
                         <div className="space-y-3">
-                          {comments.map(comment => (
-                            <div key={comment._id} className="bg-white rounded-lg p-3">
-                              <div className="flex items-start justify-between">
-                                <div className="flex gap-2 flex-1">
-                                  <div className="w-8 h-8 bg-[#024a47] rounded-full flex items-center justify-center text-white font-bold text-xs">
-                                    {comment.user?.businessName?.charAt(0)?.toUpperCase() || 'V'}
-                                  </div>
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-semibold text-sm">
-                                        {comment.user?.businessName || 'Vendor'}
-                                      </span>
-                                      <span className="text-xs text-gray-500">
-                                        {formatDate(comment.createdAt)}
-                                      </span>
-                                    </div>
-                                    <p className="text-sm text-gray-700 mt-1">
-                                      {comment.text}
-                                    </p>
-                                  </div>
-                                </div>
-                                {(comment.user?._id === currentVendorId || isOwnPost) && (
-                                  <button
-                                    onClick={() => handleDeleteComment(post._id, comment._id)}
-                                    className="text-gray-400 hover:text-red-500 p-1"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          ))}
+                        {post?.comments?.map((comment,i)=>{
+                            return (
+                                <div key={comment._id} className="bg-white rounded-lg p-3">
+                              
+                                 <div className="flex items-start justify-between">
+                                   <div className="flex gap-2 flex-1">
+                                   <div className="w-8 h-8 bg-[#024a47] rounded-full flex items-center justify-center text-white font-bold text-xs">
+     {(comment.user?.businessName || comment.user?.name)?.charAt(0)?.toUpperCase() || 'V'}
+   </div>
+   <div className="flex-1">
+     <div className="flex items-center gap-2">
+       <span className="font-semibold text-sm">
+         {comment.user?.businessName || comment.user?.name || 'Anonymous'}
+       </span>
+                                         <span className="text-xs text-gray-500">
+                                           {formatDate(comment.createdAt)}
+                                         </span>
+                                       </div>
+                                       <p className="text-sm text-gray-700 mt-1">
+                                         {comment.text}
+                                       </p>
+                                     </div>
+                                   </div>
+                                   {(comment.user?._id === currentVendorId || isOwnPost) && (
+                                     <button
+                                       onClick={() => handleDeleteComment(post._id, comment._id)}
+                                       className="text-gray-400 hover:text-red-500 p-1"
+                                     >
+                                       <Trash2 className="w-4 h-4" />
+                                     </button>
+                                   )}
+                                 </div>
+                               </div>
+                            )
+                        })}
                         </div>
                       ) : (
                         <p className="text-center text-gray-500 text-sm py-4">

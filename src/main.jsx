@@ -54,13 +54,18 @@ import BoostListingPage from './vendor/boost.jsx'
 import ChatPage from './vendor/chat.jsx'
 import VendorCommunityFeed from './vendor/feed.jsx'
 import IndividualPostPage from './vendor/indivisualpost.jsx'
+import UnitPurchasePage from './pages/renterconfirmationpage.jsx'
+import UserChatPage from './pages/chat.jsx'
+import SocketProvider from './context/socketContext.jsx'
+import VendorRequestsListPage from './vendor/vendorrequestlist.jsx'
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_SECRET);
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Elements stripe={stripePromise}>
-      <BrowserRouter>
+    <SocketProvider>
+    <BrowserRouter>
         <Routes>
           {/* User-side routes */}
           <Route path="/" element={<App />} />
@@ -68,13 +73,16 @@ createRoot(document.getElementById('root')).render(
           <Route path="/freezer" element={<FreezerTroubleshooting />} />
           <Route path="/refrigerator" element={<RefrigeratorTroubleshooting />} />
           <Route path="/dryer" element={<DryerTroubleshooting />} />
+          <Route path='/userchat' element={<UserChatPage/>}/>
           <Route path="/washer" element={<WasherTroubleshooting />} />
+          <Route path='/requestlist' element={<VendorRequestsListPage/>}/>
           <Route path='/listening' element={<ListingCreationFlow/>}/>
           <Route path='/listings/edit/:id' element={<UpdateListing/>}/>
           <Route path="/tv" element={<TVTroubleshooting />} />
           <Route path="/billing" element={<BillingDetailsForm/>} />
           <Route path="/delivery" element={<DeliveryAppointmentPage />} />
           <Route path="/confirm" element={<ConfirmSubmitPage />} />
+          <Route path='/renterconfirmation' element={<UnitPurchasePage/>}/>
           <Route path="/dashboard" element={<RentSimpleAccount/>} />
           <Route path="/reset-password" element={<Resetpassword/>} />
           <Route path="/confirmation" element={<OrderConfirmation/>} />
@@ -90,6 +98,11 @@ createRoot(document.getElementById('root')).render(
           <Route path='/community' element={<CommunityPostPage/>  }/>
           <Route path='/mylistenings' element={<VendorFeed/>}/>
           <Route path='/feed' element={<VendorCommunityFeed/>}/>
+          <Route path='/chat' element={<ChatPage/>}/>
+<Route path='/boost' element={<BoostListingPage/>}/>
+            <Route path='/vendorlogin' element={<VendorLogin/>}/>
+            <Route path='/vendorregister' element={<VendorSignup/>}/>
+            <Route path='/vendorreset' element={<VendorResetPassword/>}/>
           {/* Admin Routes (Protected) */}
           <Route element={<Middleware />}>
             <Route path="/admin" element={<AdminApp />}>
@@ -101,14 +114,10 @@ createRoot(document.getElementById('root')).render(
               <Route path="analytics" element={<AdminAnalytics />} />
               <Route path="notifications" element={<AdminNotifications />} />
             </Route>
-<Route path='/chat' element={<ChatPage/>}/>
-<Route path='/boost' element={<BoostListingPage/>}/>
-            <Route path='/vendorlogin' element={<VendorLogin/>}/>
-            <Route path='/vendorregister' element={<VendorSignup/>}/>
-            <Route path='/vendorreset' element={<VendorResetPassword/>}/>
           </Route>
         </Routes>
       </BrowserRouter>
+    </SocketProvider>
     </Elements>
   </StrictMode>,
 )

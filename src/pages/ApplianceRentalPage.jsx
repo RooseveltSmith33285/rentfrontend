@@ -4,128 +4,128 @@ import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import { BASE_URL } from '../baseUrl';
 import { useNavigate } from 'react-router-dom';
+import ComboPopup from '../components/combopopup';
+
 
 export default function ApplianceRentalPage() {
-  const [selectedAppliances, setSelectedAppliances] = useState([]);
-  const [showCart, setShowCart] = useState(false);
   const [appliances, setAppliances] = useState([]);
-  const [cartItems, setCartItems] = useState([]);
+  const [filteredAppliances, setFilteredAppliances] = useState([]);
   const [showComboPopup, setShowComboPopup] = useState(false);
   const [selectedComboAppliance, setSelectedComboAppliance] = useState(null);
   const [selectedPlugType, setSelectedPlugType] = useState('');
-  const [selectedTvSize, setSelectedTvSize] = useState(0);
-  const [loading,setLoading]=useState(false)
+  const [requests, setRequests] = useState([]);
+  const [showPlugpopup, setshowPlugpopup] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedPriceRange, setSelectedPriceRange] = useState(null);
+  const [showPriceDropdown, setShowPriceDropdown] = useState(false);
   const navigate = useNavigate();
 
-  // Load cart from localStorage on mount
+  const priceRanges = [
+    { label: '$20-$60', min: 20, max: 60 },
+    { label: '$60-$100', min: 60, max: 100 },
+    { label: '$100-$140', min: 100, max: 140 },
+    { label: '$140-$180', min: 140, max: 180 },
+    { label: '$180-$220', min: 180, max: 220 },
+    { label: '$220-$250', min: 220, max: 250 }
+  ];
+
   useEffect(() => {
     getProducts();
-    loadCartFromLocalStorage();
+    getUserRequests();
   }, []);
 
-  const loadCartFromLocalStorage = () => {
-    try {
-      const savedCart = localStorage.getItem('cartItems');
-      if (savedCart) {
-        const parsedCart = JSON.parse(savedCart);
-        setCartItems(parsedCart);
-        setSelectedAppliances(parsedCart.map(item => item._id));
-      }
-    } catch (e) {
-      console.error('Error loading cart from localStorage:', e);
+  // Apply filters whenever appliances, category, or price range changes
+  useEffect(() => {
+    applyFilters();
+  }, [appliances, selectedCategory, selectedPriceRange]);
+
+  const applyFilters = () => {
+    let filtered = [...appliances];
+
+    // Apply category filter
+    if (selectedCategory) {
+      filtered = filtered.filter(appliance => {
+        const category = appliance.category.toLowerCase();
+        const title = appliance.title.toLowerCase();
+        const searchTerm = selectedCategory.toLowerCase();
+        
+        // Handle "Washer & Dryer" specially
+        if (searchTerm === 'washer & dryer') {
+          return (category.includes('washer') && category.includes('dryer')) ||
+                 (title.includes('washer') && title.includes('dryer'));
+        }
+        
+        return category.includes(searchTerm) || title.includes(searchTerm);
+      });
+    }
+
+    // Apply price filter
+    if (selectedPriceRange) {
+      filtered = filtered.filter(appliance => {
+        const price = appliance.pricing.rentPrice;
+        return price >= selectedPriceRange.min && price <= selectedPriceRange.max;
+      });
+    }
+
+    setFilteredAppliances(filtered);
+  };
+
+  const handleCategoryFilter = (category) => {
+    if (selectedCategory === category) {
+      setSelectedCategory(''); // Deselect if clicking the same category
+    } else {
+      setSelectedCategory(category);
     }
   };
 
-  const saveCartToLocalStorage = (items) => {
-    try {
-      localStorage.setItem('cartItems', JSON.stringify(items));
-    } catch (e) {
-      console.error('Error saving cart to localStorage:', e);
-      toast.error('Error saving cart');
+  const handlePriceFilter = (range) => {
+    if (selectedPriceRange?.label === range.label) {
+      setSelectedPriceRange(null); // Deselect if clicking the same range
+    } else {
+      setSelectedPriceRange(range);
     }
+    setShowPriceDropdown(false);
   };
 
   const handleSelect = (appliance) => {
     try {
       // Check if it's a TV appliance
-      if (appliance.name.toLowerCase().includes('tv') && !selectedAppliances.includes(appliance._id)) {
+      if (appliance.title.toLowerCase().includes('tv')) {
         setSelectedComboAppliance(appliance);
+        setshowPlugpopup(true);
         setShowComboPopup(true);
         return;
       }
-
-      if (appliance.combo === true && !selectedAppliances.includes(appliance._id)) {
+      
+      // Check if it's a combo appliance (dryer with plug options)
+      if (appliance.combo === true) {
         setSelectedComboAppliance(appliance);
         setShowComboPopup(true);
+        setshowPlugpopup(true);
         return;
       }
-
-      if (selectedAppliances.includes(appliance._id)) {
-        // Remove from cart
-        removeFromCart(appliance._id);
-      } else {
-        // Add to cart
-        addToLocalCart(appliance);
-      }
+      
+      // For regular appliances (not TV, not combo)
+      setSelectedComboAppliance(appliance);
+      setshowPlugpopup(false);
+      setShowComboPopup(true);
+  
     } catch (e) {
-      console.error('Error updating cart:', e);
-      toast.error('Error updating cart');
+      console.error('Error selecting appliance:', e);
+      toast.error('Error selecting appliance');
     }
-  };
-
-  const addToLocalCart = (appliance, plugType = null, tvSize = null) => {
-    const cartItem = { ...appliance };
-
-    // Handle TV size selection
-    if (appliance.name.toLowerCase().includes('tv') && tvSize) {
-      cartItem.tvSize = tvSize;
-      setSelectedTvSize(tvSize.replace('"', ''));
-    }
-
-    // Handle combo appliance (dryer with plug type)
-    if (appliance.combo === true && plugType) {
-      cartItem.comboItem = {
-        plugType: plugType,
-        plugDescription: plugType === '3-prong'
-          ? '3-prong 220v USA Homes'
-          : '4-prong 220V USA Homes'
-      };
-    }
-
-    const updatedCart = [...cartItems, cartItem];
-    setCartItems(updatedCart);
-    setSelectedAppliances([...selectedAppliances, appliance._id]);
-    saveCartToLocalStorage(updatedCart);
-    toast.success('Item added to cart');
-  };
-
-  const removeFromCart = (applianceId) => {
-    const updatedCart = cartItems.filter(item => item._id !== applianceId);
-    setCartItems(updatedCart);
-    setSelectedAppliances(selectedAppliances.filter(id => id !== applianceId));
-    saveCartToLocalStorage(updatedCart);
-    toast.info('Item removed from cart');
   };
 
   const handlePlugTypeSelect = (plugType) => {
     try {
       setSelectedPlugType(plugType);
-
-      if (selectedComboAppliance) {
-        // Check if it's a TV or a combo appliance
-        if (selectedComboAppliance.name.toLowerCase().includes('tv')) {
-          addToLocalCart(selectedComboAppliance, null, plugType);
-        } else {
-          addToLocalCart(selectedComboAppliance, plugType);
-        }
-      }
-
       setShowComboPopup(false);
       setSelectedComboAppliance(null);
       setSelectedPlugType('');
+      toast.success('Selection confirmed');
     } catch (e) {
-      console.error('Error adding appliance to cart:', e);
-      toast.error('Error adding appliance to cart');
+      console.error('Error with selection:', e);
+      toast.error('Error with selection');
     }
   };
 
@@ -135,75 +135,10 @@ export default function ApplianceRentalPage() {
     setSelectedPlugType('');
   };
 
-  const syncCartWithAPI = async () => {
-    try {
-      setLoading(true)
-      const token = localStorage.getItem('token');
-      
-      
-     
-   
-       await axios.post(`${BASE_URL}/addItemsToCart`, { cartItems }, { headers:{
-        Authorization:`Bearer ${token}`
-       } })
-     
-
-      // Update TV size if exists
-      if (selectedTvSize) {
-        await axios.patch(`${BASE_URL}/updateTvscreen`, 
-          { tvSize: selectedTvSize },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }
-        );
-      }
-
-      return true;
-    } catch (e) {
-      console.error('Error syncing cart with API:', e);
-      toast.error('Error syncing cart');
-      return false;
-    }
-  };
-
-  const handleContinue = async () => {
-    if (selectedAppliances.length === 0) {
-      toast.warning('Please select at least one item');
-      return;
-    }
-
-    const synced = await syncCartWithAPI();
-    setLoading(false)
-    if (synced) {
-      navigate('/delivery');
-    }
-  };
-
-  const handleViewCart = () => {
-    setShowCart(true);
-  };
-
-  const handleCloseCart = () => {
-    setShowCart(false);
-  };
-
-  const getTotalPrice = () => {
-    let total = cartItems.reduce((total, item) => {
-      return total + parseInt(item.monthly_price);
-    }, 0);
-
-    if (cartItems?.find(u => u?.name?.toLowerCase().includes("tv"))) {
-      total = (total + parseInt(selectedTvSize)) - 1;
-    }
-    return total;
-  };
-
   const getProducts = async () => {
     try {
-      let response = await axios.get(`${BASE_URL}/getProducts`);
-      setAppliances(response.data.products);
+      let response = await axios.get(`${BASE_URL}/getUserListenings`);
+      setAppliances(response.data.listenings || []);
     } catch (e) {
       if (e?.response?.data?.error) {
         toast.dismiss();
@@ -215,281 +150,62 @@ export default function ApplianceRentalPage() {
     }
   };
 
-  const ComboPopup = ({ showComboPopup, selectedPlugType, setShowComboPopup, setSelectedPlugType, selectedComboAppliance, handlePlugTypeSelect }) => {
-    const isTV = selectedComboAppliance?.name.toLowerCase().includes('tv');
-
-    const tvSizes = [
-      { size: '40"', price: 40, note: 'Entry-level size for bedrooms, dorm rooms, small apartments' },
-      { size: '43"', price: 43, note: 'Popular budget-friendly living-room option' },
-      { size: '50"', price: 50, note: 'Very common mid-range size for living rooms' },
-      { size: '55"', price: 55, note: 'One of the top-selling mainstream sizes for households' },
-      { size: '60"', price: 60, note: 'Preferred for larger living rooms or family spaces' },
-      { size: '65"', price: 65, note: 'Fast-growing favorite for home-entertainment setups' },
-      { size: '70"', price: 70, note: 'Big-screen experience for movie and sports fans' },
-      { size: '75"', price: 75, note: 'Premium choice; often requested for home theaters' },
-      { size: '80"', price: 80, note: 'Upper-end for most renters; ideal for large rooms or event viewing' }
-    ];
-
-    const handlePlugSelect = (plugType) => {
-      handlePlugTypeSelect(plugType);
-    };
-
-    const handleTvSize = (tvSize) => {
-      handlePlugSelect(tvSize);
-    };
-
-    const PlugIcon3Prong = () => (
-      <div className="w-24 h-24 mx-auto mb-4">
-        <svg viewBox="0 0 100 100" className="w-full h-full">
-          <circle cx="50" cy="50" r="45" fill="none" stroke="#024a47" strokeWidth="3" />
-          <line x1="35" y1="25" x2="45" y2="35" stroke="#024a47" strokeWidth="4" strokeLinecap="round" />
-          <line x1="65" y1="25" x2="55" y2="35" stroke="#024a47" strokeWidth="4" strokeLinecap="round" />
-          <line x1="50" y1="60" x2="50" y2="75" stroke="#024a47" strokeWidth="4" strokeLinecap="round" />
-        </svg>
-      </div>
-    );
-
-    const PlugIcon4Prong = () => (
-      <div className="w-24 h-24 mx-auto mb-4">
-        <svg viewBox="0 0 100 100" className="w-full h-full">
-          <circle cx="50" cy="50" r="45" fill="none" stroke="#024a47" strokeWidth="3" />
-          <rect x="35" y="25" width="4" height="15" fill="#024a47" rx="2" />
-          <rect x="48" y="25" width="4" height="15" fill="#024a47" rx="2" />
-          <rect x="61" y="25" width="4" height="15" fill="#024a47" rx="2" />
-          <ellipse cx="50" cy="65" rx="8" ry="6" fill="#024a47" />
-        </svg>
-      </div>
-    );
-
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <div className="bg-white shadow-sm">
-          <div className="max-w-2xl mx-auto px-4 py-6">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center mb-4">
-                <div className="relative">
-                  <svg width="80" height="60" viewBox="0 0 80 60" className="text-[#024a47]">
-                    <rect x="10" y="8" width="6" height="12" fill="#4a9b8e" />
-                    <polygon points="40,5 70,25 10,25" fill="#024a47" />
-                    <rect x="15" y="25" width="50" height="30" fill="#4a9b8e" />
-                    <rect x="30" y="35" width="8" height="6" fill="white" stroke="#024a47" strokeWidth="1" />
-                    <rect x="42" y="35" width="8" height="6" fill="white" stroke="#024a47" strokeWidth="1" />
-                    <circle cx="34" cy="38" r="2" fill="none" stroke="#024a47" strokeWidth="0.5" />
-                    <circle cx="46" cy="38" r="2" fill="none" stroke="#024a47" strokeWidth="0.5" />
-                  </svg>
-                </div>
-              </div>
-              <h1 className="text-3xl font-bold text-[#024a47] mb-2">RentSimple</h1>
-              <p className="text-lg text-gray-600">Rent-to-Own Appliance</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 flex items-center justify-center p-4">
-          <div className="max-w-4xl w-full">
-            {isTV ? (
-              <>
-                <h2 className="text-4xl font-bold text-[#024a47] text-center mb-4">
-                  Select TV Size
-                </h2>
-                <p className="text-center text-gray-600 mb-8">Choose the perfect screen size for your space</p>
-
-                <div className="grid gap-4 max-w-3xl mx-auto">
-                  {tvSizes.map((tv) => (
-                    <div key={tv.size} className="bg-white rounded-xl border-2 border-gray-200 p-6 hover:shadow-lg transition-all duration-200">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="text-center min-w-[60px]">
-                            <div className="text-3xl font-bold text-[#024a47]">{tv.size}</div>
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-gray-700 text-sm">{tv.note}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                          <div className="text-right mr-4">
-                            <div className="text-2xl font-bold text-[#024a47]">${tv.price}</div>
-                            <div className="text-sm text-gray-500">/month</div>
-                          </div>
-                          <button
-                            onClick={() => handleTvSize(tv.size)}
-                            className="bg-[#024a47] hover:bg-[#035d59] text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200"
-                          >
-                            Select
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <>
-                <h2 className="text-4xl font-bold text-[#024a47] text-center mb-12">
-                  Select Dryer Plug Type
-                </h2>
-
-                <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-                  <div className="bg-white rounded-2xl border-2 border-gray-200 p-8 text-center hover:shadow-lg transition-all duration-200">
-                    <PlugIcon3Prong />
-                    <h3 className="text-3xl font-bold text-[#024a47] mb-2">3-Prong</h3>
-                    <p className="text-xl text-gray-600 mb-8">220V • USA Homes</p>
-                    <button
-                      onClick={() => handlePlugSelect('3-prong')}
-                      className="w-full bg-[#024a47] hover:bg-[#035d59] text-white font-bold py-4 px-8 rounded-xl text-lg transition-colors duration-200 transform hover:scale-105"
-                    >
-                      Select
-                    </button>
-                  </div>
-
-                  <div className="bg-white rounded-2xl border-2 border-gray-200 p-8 text-center hover:shadow-lg transition-all duration-200">
-                    <PlugIcon4Prong />
-                    <h3 className="text-3xl font-bold text-[#024a47] mb-2">4-Prong</h3>
-                    <p className="text-xl text-gray-600 mb-8">220V • USA Homes</p>
-                    <button
-                      onClick={() => handlePlugSelect('4-prong')}
-                      className="w-full bg-[#024a47] hover:bg-[#035d59] text-white font-bold py-4 px-8 rounded-xl text-lg transition-colors duration-200 transform hover:scale-105"
-                    >
-                      Select
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    );
+  const getPrimaryImage = (images) => {
+    if (!images || images.length === 0) return 'https://via.placeholder.com/200';
+    const primary = images.find(img => img.isPrimary);
+    return primary ? primary.url : images[0].url;
   };
 
-  const WasherDryerIcon = () => (
-    <div className="flex space-x-1">
-      <div className="w-16 h-20 bg-gray-100 border-2 border-gray-300 rounded-lg relative">
-        <div className="absolute top-2 left-2 w-2 h-1 bg-gray-400 rounded"></div>
-        <div className="absolute top-2 right-2 w-3 h-1 bg-gray-700 rounded"></div>
-        <div className="absolute top-6 left-1/2 transform -translate-x-1/2 w-10 h-10 border-2 border-gray-400 rounded-full">
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-6 h-6 bg-gray-300 rounded-full"></div>
-        </div>
-      </div>
-      <div className="w-16 h-20 bg-gray-100 border-2 border-gray-300 rounded-lg relative">
-        <div className="absolute top-2 left-2 w-2 h-1 bg-gray-400 rounded"></div>
-        <div className="absolute top-2 right-2 w-3 h-1 bg-gray-700 rounded"></div>
-        <div className="absolute top-6 left-1/2 transform -translate-x-1/2 w-10 h-10 border-2 border-gray-400 rounded-full bg-gray-700"></div>
-      </div>
-    </div>
-  );
+  const getFeatures = (specifications) => {
+    if (!specifications || specifications.size === 0) return [];
+    return Array.from(specifications.values()).slice(0, 3);
+  };
 
-  const RefrigeratorIcon = () => (
-    <div className="w-20 h-24 bg-gray-100 border-2 border-gray-300 rounded-lg relative">
-      <div className="absolute top-2 left-2 w-2 h-1 bg-gray-400 rounded"></div>
-      <div className="absolute top-2 right-2 w-3 h-1 bg-gray-700 rounded"></div>
-      <div className="absolute top-8 left-1/2 transform -translate-x-1/2 w-16 h-1 bg-gray-400"></div>
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-12 h-1 bg-gray-400"></div>
-    </div>
-  );
-
-  const DeepFreezerIcon = () => (
-    <div className="w-20 h-16 bg-gray-100 border-2 border-gray-300 rounded-lg relative">
-      <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-16 h-2 bg-gray-200 border border-gray-300 rounded-t"></div>
-      <div className="absolute top-4 left-2 right-2 bottom-2 bg-gray-50 rounded"></div>
-    </div>
-  );
-
-  const getApplianceIcon = (photo) => {
-    if (photo?.includes('washer') || photo?.includes('dryer')) {
-      return <WasherDryerIcon />;
-    } else if (photo?.includes('refrigerator')) {
-      return <RefrigeratorIcon />;
-    } else if (photo?.includes('freezer')) {
-      return <DeepFreezerIcon />;
-    } else {
-      return <WasherDryerIcon />;
+  const getUserRequests = async () => {
+    try {
+      let token = localStorage.getItem('token');
+      let response = await axios.get(`${BASE_URL}/getRequestsUser`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      setRequests(response.data.requests);
+    } catch (e) {
+      console.error('Error fetching user requests:', e);
     }
   };
 
-  if (showCart) {
-    return (
-      <div className="min-h-screen bg-[#f9faf5] p-4 sm:p-6 md:p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Shopping Cart</h1>
-            <button onClick={handleCloseCart} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
-          </div>
+const handleReject=async(appliance)=>{
+  try{
+   
+let response=await axios.patch(`${BASE_URL}/rejectOffer/${appliance._id}`)
 
-          {cartItems.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-              <p className="text-gray-500 text-lg">Your cart is empty</p>
-              <button onClick={handleCloseCart} className="mt-4 bg-[#024a47] hover:bg-[#024a47] text-white px-6 py-3 rounded-lg font-semibold transition-colors">
-                Continue Shopping
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {cartItems.map((item) => (
-                <div key={item._id} className="bg-white rounded-2xl border border-gray-200 p-6 flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex-shrink-0">
-                      <img className='w-[5rem]' src={item?.photo} alt={item.name} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{item.name}</h3>
-                      <div className="text-sm text-gray-600">
-                        {item.key_features && item.key_features.length > 0 ? (
-                          item.key_features.map((feature, index) => (
-                            <span key={index}>
-                              {feature}
-                              {index < item.key_features.length - 1 && ', '}
-                            </span>
-                          ))
-                        ) : (
-                          <span>No features listed</span>
-                        )}
-                      </div>
-                      {item.comboItem && (
-                        <div className="text-xs text-[#024a47] mt-1">
-                          Plug type: {item.comboItem.plugDescription}
-                        </div>
-                      )}
-                      {item.tvSize && (
-                        <div className="text-xs text-[#024a47] mt-1">
-                          TV Size: {item.tvSize}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <span className="text-xl font-bold text-gray-900">${item?.name?.match(/tv/i) ? (item.monthly_price * parseInt(selectedTvSize)) : item.monthly_price}/mo</span>
-                    <button onClick={() => removeFromCart(item._id)} className="text-red-500 hover:text-red-700 text-sm font-semibold">
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ))}
+setRequests(prev =>
+  prev.map(req =>
+    req.listing === appliance._id
+      ? { ...req, status: 'rejected' }
+      : req
+  )
+);
 
-              <div className="bg-white rounded-2xl border border-gray-200 p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-lg font-semibold text-gray-900">Total Monthly Cost:</span>
-                  <span className="text-2xl font-bold text-[#024a47]">${getTotalPrice()}/mo</span>
-                </div>
-                <div className="flex space-x-4">
-                  <button onClick={handleCloseCart} className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 px-6 rounded-lg font-semibold transition-colors">
-                    Continue Shopping
-                  </button>
-                  <button onClick={handleContinue} className="flex-1 bg-[#024a47] hover:bg-[#024a47] text-white py-3 px-6 rounded-lg font-semibold transition-colors">
-               {loading?'...Processing':'Proceed to Checkout'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
+alert("Offer rejected sucessfully")
+}catch(e){
+  if(e?.response?.data?.error){
+alert(e?.response?.data?.error)
+  }else{
+alert("Error occured while trying to reject offer")
   }
+  }
+}
+
+  const displayAppliances = filteredAppliances.length > 0 || selectedCategory || selectedPriceRange 
+    ? filteredAppliances 
+    : appliances;
 
   return (
     <>
       <ToastContainer containerId={"productsPage"} />
+      
       {showComboPopup ? (
         <ComboPopup
           selectedPlugType={selectedPlugType}
@@ -500,92 +216,308 @@ export default function ApplianceRentalPage() {
           handlePlugTypeSelect={handlePlugTypeSelect}
         />
       ) : (
-        <div className="min-h-screen bg-[#f9faf5] p-4 sm:p-6 md:p-8">
+        <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8">
           <div className="max-w-4xl mx-auto">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6 mb-8">
-              {appliances.map((appliance) => (
-                <div key={appliance._id} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col">
-                  <div className="flex min-h-[100px] max-h-[250px] justify-center mb-6">
-                    <img className='w-[8rem]' src={appliance?.photo} alt={appliance.name} />
-                  </div>
+            {/* Greeting Header */}
+            <div className="mb-6">
+              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
+                Hi, Randall 👋
+              </h1>
+            </div>
 
-                  <div className="text-center mb-6">
-                    <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-                      {appliance.name}
-                    </h3>
-                    <p className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
-                      ${appliance.monthly_price}/mo
-                    </p>
-
-                    {appliance.combo && (
-                      <div className="inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full mb-3">
-                        COMBO SET
-                      </div>
+            {/* Filter Buttons */}
+            <div className="flex flex-wrap gap-3 mb-6">
+              {/* Price Filter with Dropdown */}
+              <div className="relative">
+                <button 
+                  onClick={() => setShowPriceDropdown(!showPriceDropdown)}
+                  className={`px-4 py-2 border rounded-full transition-colors ${
+                    selectedPriceRange
+                      ? 'bg-[#024a47] text-white border-[#024a47]'
+                      : 'bg-white border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {selectedPriceRange ? selectedPriceRange.label : 'Price Range'} ▼
+                </button>
+                
+                {showPriceDropdown && (
+                  <div className="absolute top-full mt-2 left-0 bg-white border border-gray-300 rounded-lg shadow-lg z-10 min-w-[150px]">
+                    {priceRanges.map((range, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handlePriceFilter(range)}
+                        className={`block w-full text-left px-4 py-2 hover:bg-gray-100 first:rounded-t-lg last:rounded-b-lg ${
+                          selectedPriceRange?.label === range.label ? 'bg-[#024a47] text-white hover:bg-[#035d59]' : ''
+                        }`}
+                      >
+                        {range.label}
+                      </button>
+                    ))}
+                    {selectedPriceRange && (
+                      <button
+                        onClick={() => handlePriceFilter(selectedPriceRange)}
+                        className="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 border-t border-gray-200 rounded-b-lg"
+                      >
+                        Clear Filter
+                      </button>
                     )}
+                  </div>
+                )}
+              </div>
 
-                    <div className="space-y-2 mb-4">
-                      {appliance.key_features && appliance.key_features.length > 0 ? (
-                        appliance.key_features.map((feature, index) => (
-                          <div key={index} className="flex items-center justify-center text-gray-700">
-                            <div className="w-2 h-2 bg-[#024a47] rounded-full mr-3"></div>
-                            <span className="text-base sm:text-lg">{feature}</span>
+              {/* Category Filters */}
+              <button 
+                onClick={() => handleCategoryFilter('Washer')}
+                className={`px-4 py-2 border rounded-full transition-colors ${
+                  selectedCategory === 'Washer'
+                    ? 'bg-[#024a47] text-white border-[#024a47]'
+                    : 'bg-white border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                Washer
+              </button>
+              <button 
+                onClick={() => handleCategoryFilter('Dryer')}
+                className={`px-4 py-2 border rounded-full transition-colors ${
+                  selectedCategory === 'Dryer'
+                    ? 'bg-[#024a47] text-white border-[#024a47]'
+                    : 'bg-white border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                Dryer
+              </button>
+              <button 
+                onClick={() => handleCategoryFilter('Washer & Dryer')}
+                className={`px-4 py-2 border rounded-full transition-colors ${
+                  selectedCategory === 'Washer & Dryer'
+                    ? 'bg-[#024a47] text-white border-[#024a47]'
+                    : 'bg-white border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                Washer & Dryer
+              </button>
+              <button 
+                onClick={() => handleCategoryFilter('Refrigerator')}
+                className={`px-4 py-2 border rounded-full transition-colors ${
+                  selectedCategory === 'Refrigerator'
+                    ? 'bg-[#024a47] text-white border-[#024a47]'
+                    : 'bg-white border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                Refrigerator
+              </button>
+              <button 
+                onClick={() => handleCategoryFilter('Deep Freezer')}
+                className={`px-4 py-2 border rounded-full transition-colors ${
+                  selectedCategory === 'Deep Freezer'
+                    ? 'bg-[#024a47] text-white border-[#024a47]'
+                    : 'bg-white border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                Deep Freezer
+              </button>
+              <button 
+                onClick={() => handleCategoryFilter('TV')}
+                className={`px-4 py-2 border rounded-full transition-colors ${
+                  selectedCategory === 'TV'
+                    ? 'bg-[#024a47] text-white border-[#024a47]'
+                    : 'bg-white border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                TV
+              </button>
+            </div>
+
+            {/* Active Filters Display */}
+            {(selectedCategory || selectedPriceRange) && (
+              <div className="mb-4 flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-gray-600">Active filters:</span>
+                {selectedCategory && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#024a47] text-white text-sm rounded-full">
+                    {selectedCategory}
+                    <button onClick={() => setSelectedCategory('')} className="hover:text-gray-200">×</button>
+                  </span>
+                )}
+                {selectedPriceRange && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#024a47] text-white text-sm rounded-full">
+                    {selectedPriceRange.label}
+                    <button onClick={() => setSelectedPriceRange(null)} className="hover:text-gray-200">×</button>
+                  </span>
+                )}
+                <button 
+                  onClick={() => {
+                    setSelectedCategory('');
+                    setSelectedPriceRange(null);
+                  }}
+                  className="text-sm text-red-600 hover:text-red-700 underline"
+                >
+                  Clear all
+                </button>
+              </div>
+            )}
+
+            {/* Results Count */}
+            <div className="mb-4 text-sm text-gray-600">
+              Showing {displayAppliances.length} {displayAppliances.length === 1 ? 'appliance' : 'appliances'}
+            </div>
+
+            {/* Appliances Grid */}
+            {displayAppliances.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-xl text-gray-600">No appliances found matching your filters</p>
+                <button 
+                  onClick={() => {
+                    setSelectedCategory('');
+                    setSelectedPriceRange(null);
+                  }}
+                  className="mt-4 px-6 py-2 bg-[#024a47] text-white rounded-lg hover:bg-[#035d59]"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6 mb-8">
+                {displayAppliances.map((appliance) => (
+                  <div key={appliance._id} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full">
+                    {/* Vendor Header */}
+                    <div className="flex items-center mb-4">
+                      <img 
+                        src={appliance?.vendor?.profileImage || "https://via.placeholder.com/40"} 
+                        alt={appliance?.vendor?.businessName || "Vendor"} 
+                        className="w-10 h-10 rounded-full mr-3"
+                      />
+                      <div>
+                        <h4 className="text-sm font-semibold text-gray-900">
+                          {appliance?.vendor?.businessName || "Vendor"}
+                        </h4>
+                      </div>
+                    </div>
+
+                    {/* Product Image */}
+                    <div className="flex justify-center items-center mb-4 bg-gray-50 rounded-lg p-4" style={{minHeight: '200px'}}>
+                      <img 
+                        className='w-full max-w-[200px] h-auto object-contain' 
+                        src={getPrimaryImage(appliance?.images)} 
+                        alt={appliance.title} 
+                      />
+                    </div>
+
+                    <div className="text-center mb-6 flex-grow">
+                      {/* Product Title */}
+                      <h3 className="text-xl font-bold text-gray-900 mb-1">
+                        {appliance.title}
+                      </h3>
+                      
+                      {/* Brand & Condition */}
+                      <p className="text-sm text-gray-600 mb-2">
+                        {appliance.brand} • {appliance.condition}
+                      </p>
+                      
+                      {/* Price */}
+                      <p className="text-2xl font-bold text-gray-900 mb-3">
+                        ${appliance.pricing.rentPrice}/mo
+                      </p>
+
+                      {/* Category Badge */}
+                      <div className="inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full mb-3 capitalize">
+                        {appliance.category}
+                      </div>
+
+                      {/* Specifications */}
+                      <div className="space-y-1 mb-4">
+                        {getFeatures(appliance.specifications).length > 0 ? (
+                          getFeatures(appliance.specifications).map((feature, index) => (
+                            <div key={index} className="flex items-center justify-center text-gray-700">
+                              <div className="w-2 h-2 bg-[#024a47] rounded-full mr-3"></div>
+                              <span className="text-base sm:text-lg">{feature}</span>
+                            </div>
+                          ))
+                        ) : appliance.description ? (
+                          <div className="text-sm text-gray-600 line-clamp-2">
+                            {appliance.description}
                           </div>
-                        ))
-                      ) : (
-                        <div className="flex items-center justify-center text-gray-500">
-                          <span className="text-base sm:text-lg">No features listed</span>
+                        ) : (
+                          <div className="flex items-center justify-center text-gray-500">
+                            <span className="text-base sm:text-lg">No features listed</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Availability Status */}
+                      {!appliance.availability?.isAvailable && (
+                        <div className="flex items-center justify-center text-red-500 mb-4">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="text-sm">Currently unavailable</span>
                         </div>
                       )}
                     </div>
 
-                    {appliance.stock_status === 'low' && (
-                      <div className="flex items-center justify-center text-gray-500 mb-4">
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span className="text-sm">Low stock</span>
-                      </div>
-                    )}
+                    {/* Buttons at bottom */}
+                    <div className="mt-auto space-y-3">
+                      {/* Select Button */}
+                    {requests?.find(u => u.vendor == appliance.vendor._id && u.approvedByVendor==true && u.status!="rejected")?(
+                    <div className="flex gap-4">
+                    {/* Accept Button */}
+                    <button
+                      onClick={() =>navigate(`/renterconfirmation?id=${requests?.find(u => u.vendor == appliance.vendor._id)?._id}`)}
+                      disabled={!appliance.availability?.isAvailable}
+                      className={`flex-1 py-3 px-6 rounded-lg font-semibold text-lg transition-colors ${
+                        !appliance.availability?.isAvailable
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-[#024a47] hover:bg-[#035d59] text-white'
+                      }`}
+                    >
+                      Accept Request
+                    </button>
+                  
+                    {/* Reject Button */}
+                    <button
+                      onClick={() => handleReject(appliance)}
+                      disabled={!appliance.availability?.isAvailable}
+                      className={`flex-1 py-3 px-6 rounded-lg font-semibold text-lg transition-colors ${
+                        !appliance.availability?.isAvailable
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-red-600 hover:bg-red-700 text-white'
+                      }`}
+                    >
+                      Reject Offer
+                    </button>
                   </div>
+                  
+                    ):(
+                      <>
+                   {requests?.find(u=>u.vendor==appliance.vendor._id)?<p>
+                    Waiting for vendor approval
+                   </p>:<button
+                        onClick={() => handleSelect(appliance)}
+                        disabled={!appliance.availability?.isAvailable}
+                        className={`w-full py-3 px-6 rounded-lg font-semibold text-lg transition-colors ${
+                          !appliance.availability?.isAvailable
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-[#024a47] hover:bg-[#035d59] text-white'
+                        }`}
+                      >
+                        {!appliance.availability?.isAvailable ? 'Unavailable' : 'Select'}
+                      </button>}
+                      </>
+                    )}
+                    
 
-                  <button
-                    onClick={() => handleSelect(appliance)}
-                    className={`w-full py-3 px-6 rounded-lg font-semibold text-lg transition-colors ${selectedAppliances.includes(appliance._id)
-                        ? 'bg-[#024a47] text-white'
-                        : 'bg-[#024a47] hover:bg-[#024a47] text-white'
-                      }`}
-                  >
-                    {selectedAppliances.includes(appliance._id) ? 'Selected' : 'Select'}
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            <div className="bg-[#024a47] rounded-2xl p-4 sm:p-6 text-center">
-              <div className="flex flex-col sm:flex-row items-center justify-between">
-                <div className="text-white mb-4 sm:mb-0">
-                  <span className="text-lg font-semibold">
-                    {selectedAppliances.length} item{selectedAppliances.length !== 1 ? 's' : ''} selected
-                  </span>
-                </div>
-
-                <div className="flex space-x-4">
-                  <button onClick={handleViewCart} className="bg-white text-[#024a47] px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-                    View Cart
-                  </button>
-                  <button
-                    onClick={handleContinue}
-                    className={`px-6 py-3 rounded-lg font-semibold transition-colors ${selectedAppliances.length > 0
-                        ? 'bg-white text-[#024a47] hover:bg-gray-100'
-                        : 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                      }`}
-                    disabled={selectedAppliances.length === 0}
-                  >
-                   {loading?'...Processing':' Continue'}
-                  </button>
-                </div>
+                    <button
+                          onClick={() => {
+                            navigate(`/userchat?vendor=${appliance?.vendor?._id}`)
+                          }}
+                          className="w-full py-3 px-6 rounded-lg font-semibold text-lg bg-[#024a47] hover:bg-[#035d59] text-white transition-colors"
+                        >
+                          Contact vendor
+                        </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}

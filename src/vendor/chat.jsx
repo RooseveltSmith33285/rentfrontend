@@ -1,271 +1,621 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Send, Search, Home, MoreVertical, Check, CheckCheck } from "lucide-react";
+import { useLocation } from "react-router-dom";
+import axios from "axios";
+import { BASE_URL } from "../baseUrl";
+import { useContext } from "react";
+
+import { SocketContext } from "../context/socketContext";
+
+const containsContactInfo = (text) => {
+  if (!text) return false;
+
+  const lowerText = text.toLowerCase();
+
+  // ✅ Strong and simple email pattern
+  const emailPattern = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+  if (emailPattern.test(lowerText)) {
+    return true;
+  }
+
+  // ✅ Phone number patterns
+  const phonePatterns = [
+    /\b\d{10,}\b/, // 10+ consecutive digits
+    /\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/, // xxx-xxx-xxxx
+    /\(\d{3}\)\s?\d{3}[-.\s]?\d{4}/, // (xxx) xxx-xxxx
+    /\+\d{1,3}[-.\s]?\d{3,}/, // International
+  ];
+  for (const pattern of phonePatterns) {
+    if (pattern.test(lowerText)) return true;
+  }
+
+  // ✅ URL detection
+  if (lowerText.includes('http://') || lowerText.includes('https://') || lowerText.includes('www.')) {
+    return true;
+  }
+
+  // ✅ WhatsApp mentions
+  if (lowerText.includes('whatsapp') || lowerText.includes('wa.me')) {
+    return true;
+  }
+
+  // ✅ Common contact keywords (even without @)
+  const contactKeywords = [
+    'gmail', 'yahoo', 'hotmail', 'outlook', 'email',
+    'call me', 'text me', 'contact me'
+  ];
+  for (const keyword of contactKeywords) {
+    if (lowerText.includes(keyword)) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 
 function ChatPage() {
   const messagesEndRef = useRef(null);
-  
-  // Example data
-  const exampleConversations = [
-    {
-      id: 1,
-      otherUser: {
-        id: 2,
-        name: "Sarah Johnson",
-        role: "vendor"
-      },
-      lastMessage: "The equipment is available for pickup tomorrow",
-      lastMessageTime: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-      unreadCount: 2
-    },
-    {
-      id: 2,
-      otherUser: {
-        id: 3,
-        name: "Mike Chen",
-        role: "renter"
-      },
-      lastMessage: "Thanks! I'll be there at 10 AM",
-      lastMessageTime: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-      unreadCount: 0
-    },
-    {
-      id: 3,
-      otherUser: {
-        id: 4,
-        name: "Ahmed Hassan",
-        role: "vendor"
-      },
-      lastMessage: "Do you still have the excavator available?",
-      lastMessageTime: new Date(Date.now() - 1000 * 60 * 60 * 24), // Yesterday
-      unreadCount: 0
-    },
-    {
-      id: 4,
-      otherUser: {
-        id: 5,
-        name: "Emily Rodriguez",
-        role: "renter"
-      },
-      lastMessage: "Great! Looking forward to working with you",
-      lastMessageTime: new Date(Date.now() - 1000 * 60 * 60 * 48), // 2 days ago
-      unreadCount: 0
-    }
-  ];
+  const location = useLocation();
+  const socketRef = useContext(SocketContext);
 
-  const exampleMessages = {
-    1: [
-      {
-        id: 1,
-        senderId: 2,
-        senderName: "Sarah Johnson",
-        message: "Hi! I'm interested in renting your concrete mixer for next week.",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3),
-        read: true
-      },
-      {
-        id: 2,
-        senderId: 1,
-        senderName: "You",
-        message: "Hello! Yes, it's available. Which days do you need it?",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2.5),
-        read: true
-      },
-      {
-        id: 3,
-        senderId: 2,
-        senderName: "Sarah Johnson",
-        message: "I need it from Monday to Friday. What's your rate?",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-        read: true
-      },
-      {
-        id: 4,
-        senderId: 1,
-        senderName: "You",
-        message: "It's $150 per day or $600 for the full week. Includes delivery within 50km.",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 1.5),
-        read: true
-      },
-      {
-        id: 5,
-        senderId: 2,
-        senderName: "Sarah Johnson",
-        message: "Perfect! I'll take it for the week. When can I pick it up?",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60),
-        read: true
-      },
-      {
-        id: 6,
-        senderId: 1,
-        senderName: "You",
-        message: "Great! I can have it ready by Sunday evening or Monday morning. Which works better?",
-        timestamp: new Date(Date.now() - 1000 * 60 * 45),
-        read: false
-      },
-      {
-        id: 7,
-        senderId: 2,
-        senderName: "Sarah Johnson",
-        message: "Monday morning would be ideal",
-        timestamp: new Date(Date.now() - 1000 * 60 * 35),
-        read: false
-      },
-      {
-        id: 8,
-        senderId: 2,
-        senderName: "Sarah Johnson",
-        message: "The equipment is available for pickup tomorrow",
-        timestamp: new Date(Date.now() - 1000 * 60 * 30),
-        read: false
-      }
-    ],
-    2: [
-      {
-        id: 9,
-        senderId: 1,
-        senderName: "You",
-        message: "Hi Mike! Your scaffolding rental is confirmed for next week.",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-        read: true
-      },
-      {
-        id: 10,
-        senderId: 3,
-        senderName: "Mike Chen",
-        message: "Awesome! What time should I come by?",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 20),
-        read: true
-      },
-      {
-        id: 11,
-        senderId: 1,
-        senderName: "You",
-        message: "Anytime between 8 AM and 5 PM works. Just give me a heads up 30 mins before.",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 18),
-        read: true
-      },
-      {
-        id: 12,
-        senderId: 3,
-        senderName: "Mike Chen",
-        message: "Thanks! I'll be there at 10 AM",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-        read: true
-      }
-    ],
-    3: [
-      {
-        id: 13,
-        senderId: 4,
-        senderName: "Ahmed Hassan",
-        message: "Hi, I saw your listing for the excavator.",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 26),
-        read: true
-      },
-      {
-        id: 14,
-        senderId: 4,
-        senderName: "Ahmed Hassan",
-        message: "Do you still have the excavator available?",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-        read: true
-      }
-    ],
-    4: [
-      {
-        id: 15,
-        senderId: 5,
-        senderName: "Emily Rodriguez",
-        message: "Hi! I'd like to rent your power tools for a home renovation project.",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 72),
-        read: true
-      },
-      {
-        id: 16,
-        senderId: 1,
-        senderName: "You",
-        message: "Sure! Which tools do you need and for how long?",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 70),
-        read: true
-      },
-      {
-        id: 17,
-        senderId: 5,
-        senderName: "Emily Rodriguez",
-        message: "I need a drill, circular saw, and sander for about 2 weeks.",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 68),
-        read: true
-      },
-      {
-        id: 18,
-        senderId: 1,
-        senderName: "You",
-        message: "All available! I can do $30/day for the set or $350 for 2 weeks.",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 66),
-        read: true
-      },
-      {
-        id: 19,
-        senderId: 5,
-        senderName: "Emily Rodriguez",
-        message: "Great! Looking forward to working with you",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48),
-        read: true
-      }
-    ]
-  };
-
-  const currentUser = { id: 1, name: "You" };
-  
-  const [conversations, setConversations] = useState(exampleConversations);
-  const [selectedConversation, setSelectedConversation] = useState(exampleConversations[0]);
-  const [messages, setMessages] = useState(exampleMessages[1]);
+  const [currentVendor, setCurrentVendor] = useState(null);
+  const [currentUser, setCurrentUser] = useState({});
+  const [conversations, setConversations] = useState([]);
+  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch conversations on mount
+  useEffect(() => {
+    const initializeChat = async () => {
+      const userIdFromUrl = await getCurrentUser();
+      await fetchConversations(userIdFromUrl);
+    };
+    initializeChat();
+  }, []);
+
 
   useEffect(() => {
-    if (selectedConversation) {
-      setMessages(exampleMessages[selectedConversation.id] || []);
+    if (socketRef?.socket && socketRef?.isConnected) {
+      // Get the vendor ID from your auth state or decode token
+      const vendorId = localStorage.getItem('vendorId');
+      console.log("VENDORID")
+      console.log(vendorId)
+      if (vendorId) {
+        socketRef.socket.emit('join', {
+          userId: vendorId,
+          userType: 'vendor'
+        });
+      }
     }
-  }, [selectedConversation]);
+  }, [socketRef?.socket, socketRef?.isConnected, currentUser, selectedConversation]);
 
+
+  // Update messages when conversation changes
+  useEffect(() => {
+    if (selectedConversation && selectedConversation.user && selectedConversation.user._id) {
+      fetchMessages(selectedConversation.user._id);
+    }
+  }, [selectedConversation?.user?._id]);
+
+  // Auto scroll to bottom
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Socket event listeners
+  useEffect(() => {
+    if (!socketRef?.socket || !socketRef?.isConnected) return;
+  
+    const socket = socketRef.socket;
+
+  // Listen for new messages
+  // Listen for new messages
+  socket.on('newMessage', (data) => {
+    console.log('New message received:', data);
+    
+    // Check if this is for current conversation
+    const isCurrentConversation = selectedConversation && 
+        (data.conversationId === selectedConversation.user._id || 
+         data.senderId === selectedConversation.user._id ||
+         data.receiverId === selectedConversation.user._id);
+    
+    // Add message to chat if it's the current conversation
+    if (isCurrentConversation) {
+      const newMsg = {
+        id: data.id,
+        senderId: data.senderId,
+        receiverId: data.receiverId,
+        senderName: data.sendBy === 'vendor' ? 'You' : (selectedConversation.user.name || 'User'),
+        message: data.message,
+        image: data.image,
+        timestamp: new Date(data.timestamp),
+        read: data.read,
+        sentBy: data.sendBy
+      };
+  
+      setMessages(prevMessages => [...prevMessages, newMsg]);
+    }
+    
+    // Handle conversation list updates
+    if (data.sendBy === 'user') {
+      setConversations(prevConvs => {
+        const existingConvIndex = prevConvs.findIndex(conv => 
+          conv.id === data.senderId || conv.user?._id === data.senderId
+        );
+        
+        if (existingConvIndex === -1) {
+          // New conversation - fetch user info asynchronously
+          axios.get(`${BASE_URL}/vendor/getUserInfo/${data.senderId}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+          }).then(response => {
+            setConversations(prev => {
+              // Check again if conversation was added while fetching
+              const stillDoesntExist = !prev.some(conv => 
+                conv.id === data.senderId || conv.user?._id === data.senderId
+              );
+              
+              if (stillDoesntExist) {
+                const newConversation = {
+                  id: data.senderId,
+                  user: response.data.user,
+                  vendor: { _id: localStorage.getItem('vendorId') },
+                  messages: [],
+                  lastMessage: data.message,
+                  lastMessageTime: new Date(data.timestamp),
+                  unreadCount: isCurrentConversation ? 0 : 1
+                };
+                return [newConversation, ...prev];
+              }
+              return prev;
+            });
+          }).catch(error => {
+            console.error('Error fetching user info:', error);
+          });
+          
+          return prevConvs;
+        } else {
+          // Existing conversation - update it
+          const updatedConvs = [...prevConvs];
+          updatedConvs[existingConvIndex] = {
+            ...updatedConvs[existingConvIndex],
+            lastMessage: data.message,
+            lastMessageTime: new Date(data.timestamp),
+            unreadCount: isCurrentConversation ? 0 : updatedConvs[existingConvIndex].unreadCount + 1
+          };
+          return updatedConvs;
+        }
+      });
+    } else if (data.sendBy === 'vendor') {
+      // Update conversation for vendor messages
+      setConversations(prevConvs =>
+        prevConvs.map(conv =>
+          conv.id === data.receiverId || conv.user?._id === data.receiverId
+            ? { ...conv, lastMessage: data.message, lastMessageTime: new Date(data.timestamp) }
+            : conv
+        )
+      );
+    }
+  });
+  // socket.on('newMessage', (data) => {
+  //   console.log('New message received:', data);
+    
+  //   // Only add message if it's for the current conversation
+  //   // Check both conversationId and senderId to handle new conversations
+  //   if (selectedConversation && 
+  //       (data.conversationId === selectedConversation.user._id || 
+  //        data.senderId === selectedConversation.user._id ||
+  //        data.receiverId === selectedConversation.user._id)) { // ADD THIS LINE
+      
+  //     const newMsg = {
+  //       id: data.id,
+  //       senderId: data.senderId,
+  //       receiverId: data.receiverId,
+  //       senderName: data.sendBy === 'vendor' ? 'You' : (selectedConversation.user.name || 'User'),
+  //       message: data.message,
+  //       image: data.image,
+  //       timestamp: new Date(data.timestamp),
+  //       read: data.read,
+  //       sentBy: data.sendBy
+  //     };
+  
+  //     setMessages(prevMessages => [...prevMessages, newMsg]);
+  //     // Update conversation list
+  //     setConversations(prevConvs =>
+  //       prevConvs.map(conv =>
+  //         conv.id === data.conversationId
+  //           ? { ...conv, lastMessage: data.message, lastMessageTime: new Date(data.timestamp) }
+  //           : conv
+  //       )
+  //     );
+  //   } else {
+  //     // If message is from different conversation, update unread count
+  //     setConversations(prevConvs =>
+  //       prevConvs.map(conv =>
+  //         conv.id === data.conversationId
+  //           ? { 
+  //               ...conv, 
+  //               lastMessage: data.message, 
+  //               lastMessageTime: new Date(data.timestamp),
+  //               unreadCount: conv.unreadCount + 1 
+  //             }
+  //           : conv
+  //       )
+  //     );
+  //   }
+  // });
+
+  // Listen for messages read
+  socket.on('messagesRead', (data) => {
+    console.log('Messages marked as read:', data);
+    
+    if (selectedConversation && data.conversationId === selectedConversation.user._id) {
+      setMessages(prevMessages =>
+        prevMessages.map(msg =>
+          msg.sentBy === 'vendor' ? { ...msg, read: true } : msg
+        )
+      );
+    }
+  });
+
+  // Listen for typing indicator
+  socket.on('userTyping', (data) => {
+    if (selectedConversation && data.conversationId === selectedConversation.user._id) {
+      // You can add a typing indicator state here
+      console.log('User is typing:', data.isTyping);
+    }
+  });
+  socket.on('messageSent', (data) => {
+    if (data.success) {
+      setMessages(prevMessages =>
+        prevMessages.map(msg =>
+          msg.id === data.tempId || msg.timestamp?.getTime() === new Date(data.timestamp).getTime()
+            ? { ...msg, read: data.read, id: data.id }
+            : msg
+        )
+      );
+    }
+  });
+
+  
+  // Cleanup
+  return () => {
+    socket.off('newMessage');
+    socket.off('messagesRead');
+    socket.off('userTyping');
+    socket.off('messageSent');
+  };
+}, [selectedConversation, socketRef]);
+
+
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Get current user from URL params
+  const getCurrentUser = async () => {
+    try {
+      let params = new URLSearchParams(location.search);
+      let userId = params.get('user');
+      
+      if (userId) {
+        let response = await axios.get(`${BASE_URL}/vendor/getUserInfo/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        let conversationResponse = await axios.get(`${BASE_URL}/vendor/getConversation/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        setCurrentUser(response.data.user);
+        
+        const conversationMessages = conversationResponse.data.conversation || [];
+        const lastMsg = conversationMessages.length > 0 
+          ? conversationMessages[conversationMessages.length - 1] 
+          : null;
+
+          const transformedMessages = conversationMessages.map(msg => ({
+            id: msg._id,
+            senderId: msg.sendBy === 'vendor' ? msg.vendor : msg.user._id,
+            receiverId: msg.sendBy === 'vendor' ? msg.user._id : msg.vendor,
+            senderName: msg.sendBy === 'vendor' ? 'You' : msg.user.name || 'User',
+            message: msg.message,
+            image: msg.image,
+            timestamp: new Date(msg.createdAt || Date.now()),
+            read: msg.sendBy === 'vendor' ? msg.seenByUser : msg.seenByVendor,
+            sentBy: msg.sendBy
+          }));
+
+
+
+        setSelectedConversation({
+          id: userId,
+          user: response.data.user,
+          messages: conversationMessages,
+          lastMessage: lastMsg ? lastMsg.message : '',
+          lastMessageTime: lastMsg ? new Date(lastMsg.createdAt || Date.now()) : new Date(),
+          unreadCount: conversationMessages.filter(msg => msg.sentBy === 'user' && !msg.read).length
+        });
+
+        setMessages(transformedMessages);
+        
+        return userId;
+      }
+    } catch (e) {
+      console.log(e.message);
+    }
+    return null;
+  };
+
+  // Mark messages as seen when conversation is opened
+useEffect(() => {
+  const markAsSeen = async () => {
+    if (selectedConversation && selectedConversation.user && selectedConversation.user._id) {
+      try {
+        await axios.get(`${BASE_URL}/vendor/seenMessages/${selectedConversation.user._id}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        // Update local state to mark messages as read
+        setMessages(prevMessages => 
+          prevMessages.map(msg => 
+            msg.sentBy === 'user' ? { ...msg, read: true } : msg
+          )
+        );
+        
+        // Update conversation unread count
+        setConversations(prevConvs =>
+          prevConvs.map(conv =>
+            conv.id === selectedConversation.id ? { ...conv, unreadCount: 0 } : conv
+          )
+        );
+
+        // Emit socket event to notify user
+if (socketRef?.socket && socketRef?.isConnected) {
+  const vendorId = localStorage.getItem('vendorId');
+  
+  socketRef.socket.emit('messagesSeen', {
+    conversationId: selectedConversation.user._id,
+    userId: selectedConversation.user._id,
+    vendorId: vendorId,
+    seenBy: 'vendor'
+  });
+}
+
+
+      } catch (e) {
+        console.log('Error marking messages as seen:', e.message);
+      }
+    }
+  };
+
+  markAsSeen();
+}, [selectedConversation?.user?._id]);
+
+  // Fetch all conversations
+  const fetchConversations = async (userIdFromUrl = null) => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${BASE_URL}/vendor/getConversations`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      // Group messages by user to create conversation list
+      const conversationsMap = {};
+      
+      response.data.conversations.forEach(msg => {
+        if (!msg.user || !msg.user._id) return; // Skip if user is null/undefined
+        
+        const userId = msg.user._id;
+        if (!conversationsMap[userId]) {
+          conversationsMap[userId] = {
+            id: userId,
+            user: msg.user,
+            vendor: msg.vendor,
+            messages: [],
+            lastMessage: msg.message,
+            lastMessageTime: new Date(msg.createdAt || Date.now()),
+            unreadCount: msg.sentBy === 'user' && !msg.seenByVendor ? 1 : 0
+          };
+        } else {
+          conversationsMap[userId].messages.push(msg);
+          
+          // Update last message if this one is more recent
+          const msgTime = new Date(msg.createdAt || Date.now());
+          if (msgTime > conversationsMap[userId].lastMessageTime) {
+            conversationsMap[userId].lastMessage = msg.message;
+            conversationsMap[userId].lastMessageTime = msgTime;
+          }
+          
+          if (msg.sentBy === 'user' && !msg.seenByVendor) {
+            conversationsMap[userId].unreadCount++;
+          }
+        }
+      });
+
+      const conversationsList = Object.values(conversationsMap).sort(
+        (a, b) => b.lastMessageTime - a.lastMessageTime
+      );
+
+      setConversations(conversationsList);
+      
+      // If userId from URL exists, select that conversation
+      if (userIdFromUrl) {
+        const userConversation = conversationsList.find(conv => conv.user._id === userIdFromUrl);
+        if (userConversation) {
+          setSelectedConversation(userConversation);
+        }
+      } else if (conversationsList.length > 0 && !selectedConversation) {
+        // Auto-select first conversation if no URL param and nothing selected
+        setSelectedConversation(conversationsList[0]);
+      }
+      
+      setLoading(false);
+    } catch (e) {
+      console.log(e.message);
+      setLoading(false);
+    }
+  };
+
+  // Fetch messages for specific user
+  const fetchMessages = async (userId) => {
+    try {
+      const response = await axios.get(`${BASE_URL}/vendor/getMessages/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      console.log("messages")
+console.log(response.data)
+      // Transform messages to match component format
+      const transformedMessages = response.data.messages.map(msg => ({
+        id: msg._id,
+        senderId: msg.sendBy === 'vendor' ? msg.vendor._id : msg.user._id,
+        receiverId: msg.sendBy === 'vendor' ? msg.user._id : msg.vendor._id,
+        senderName: msg.sendBy === 'vendor' ? 'You' : msg.user.name || 'User',
+        message: msg.message,
+        image: msg.image,
+        timestamp: new Date(msg.createdAt || Date.now()),
+        read: msg.sendBy === 'vendor' ? msg.seenByUser : msg.seenByVendor,
+        sentBy: msg.sendBy
+      }));
+
+
+      setMessages(transformedMessages);
+    } catch (e) {
+      console.log(e.message);
+    }
+  };
+
+  // Send new message
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
 
+    const hasContactInfo = containsContactInfo(newMessage.trim());
+    const messageToSend = hasContactInfo ? "⚠️ This message was deleted (contained contact information)" : newMessage.trim();
+  
     setSendingMessage(true);
+    try {
+      const conversationExists = conversations.some(conv => conv.id === selectedConversation.user._id);
     
-    // Simulate sending delay
-    setTimeout(() => {
+
+      const response = await axios.post(
+        `${BASE_URL}/vendor/sendMessage`,
+        {
+          user: selectedConversation.user._id,
+          message: hasContactInfo?messageToSend:newMessage.trim(),
+          sendBy: 'vendor'
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+
+      // Add new message to the list optimistically
       const newMsg = {
-        id: messages.length + 1,
-        senderId: currentUser.id,
+        id: response.data.id,
+        senderId: 'current-vendor',
+        receiverId: selectedConversation.user._id,
         senderName: "You",
-        message: newMessage.trim(),
+        message: hasContactInfo?messageToSend:newMessage.trim(),
         timestamp: new Date(),
-        read: false
+        read: false,
+        sentBy: 'vendor'  // Keep this as sentBy for UI consistency
       };
 
       setMessages([...messages, newMsg]);
       setNewMessage("");
-      
+
       // Update last message in conversation list
-      setConversations(conversations.map(conv => 
-        conv.id === selectedConversation.id 
-          ? { ...conv, lastMessage: newMessage.trim(), lastMessageTime: new Date(), unreadCount: 0 }
-          : conv
-      ));
+      // setConversations(conversations.map(conv =>
+      //   conv.id === selectedConversation.id
+      //     ? { ...conv, lastMessage: newMessage.trim(), lastMessageTime: new Date(), unreadCount: 0 }
+      //     : conv
+      // ));
+
+
+      if (!conversationExists) {
+        const newConversation = {
+          id: selectedConversation.user._id,
+          user: selectedConversation.user,
+          vendor: { _id: localStorage.getItem('vendorId') },
+          messages: [newMsg],
+          lastMessage: hasContactInfo?messageToSend:newMessage.trim(),
+          lastMessageTime: new Date(),
+          unreadCount: 0
+        };
+        setConversations([newConversation, ...conversations]);
+      } else {
+        // Update existing conversation
+        setConversations(conversations.map(conv =>
+          conv.id === selectedConversation.id
+            ? { ...conv, lastMessage: newMessage.trim(), lastMessageTime: new Date(), unreadCount: 0 }
+            : conv
+        ));
+      }
+
+      // Emit socket event for real-time delivery
+// Emit socket event for real-time delivery
+// if (socketRef?.socket && socketRef?.isConnected) {
+//   // Get vendor ID from the current conversation or decode from token
+//   const vendorId = localStorage.getItem('vendorId')
+ 
+//   socketRef.socket.emit('sendMessage', {
+//     conversationId: selectedConversation.user._id,
+//     senderId: vendorId,
+//     tempId: response.data.id,
+//     receiverId: selectedConversation.user._id,
+//     message: hasContactInfo ? messageToSend : newMessage.trim(),
+//     sendBy: 'vendor',
+//     senderType: 'vendor',
+//     timestamp: new Date()
+//   });
+// }
+
+
+if (socketRef?.socket && socketRef?.isConnected) {
+  // Get vendor ID from the current conversation or decode from token
+  const vendorId = localStorage.getItem('vendorId')
+ 
+  socketRef.socket.emit('sendMessage', {
+    conversationId: selectedConversation.user._id,
+    senderId: vendorId,
+    tempId: response.data.id,
+    receiverId: selectedConversation.user._id,
+    message: hasContactInfo ? messageToSend : newMessage.trim(),
+    image: response.data.image || null, // ADD THIS
+    sendBy: 'vendor',
+    senderType: 'vendor',
+    timestamp: new Date(response.data.createdAt || Date.now()), // CHANGE THIS
+    isNewConversation: !conversationExists, // ADD THIS
+    user: selectedConversation.user // ADD THIS - send user info for new conversation
+  });
+}
+
 
       setSendingMessage(false);
-    }, 500);
+    } catch (e) {
+      console.log(e.message);
+      setSendingMessage(false);
+      alert("Failed to send message. Please try again.");
+    }
   };
 
   const handleKeyPress = (e) => {
@@ -276,29 +626,40 @@ function ChatPage() {
   };
 
   const filteredConversations = conversations.filter(conv =>
-    conv.otherUser.name.toLowerCase().includes(searchQuery.toLowerCase())
+    (conv.user.name || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const formatTime = (date) => {
     const messageDate = new Date(date);
     const now = new Date();
     const diffInHours = (now - messageDate) / (1000 * 60 * 60);
-    
+
     if (diffInHours < 24) {
-      return messageDate.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
+      return messageDate.toLocaleTimeString('en-US', {
+        hour: 'numeric',
         minute: '2-digit',
-        hour12: true 
+        hour12: true
       });
     } else if (diffInHours < 48) {
       return 'Yesterday';
     } else {
-      return messageDate.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
+      return messageDate.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric'
       });
     }
   };
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#024a47] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading conversations...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
@@ -333,7 +694,7 @@ function ChatPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Search conversations..."
+                placeholder="Search users..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#024a47] focus:border-transparent"
@@ -343,35 +704,47 @@ function ChatPage() {
 
           {/* Conversation List */}
           <div className="flex-1 overflow-y-auto">
-            {filteredConversations.map((conv) => (
-              <div
-                key={conv.id}
-                onClick={() => setSelectedConversation(conv)}
-                className={`flex items-center space-x-3 p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                  selectedConversation?.id === conv.id ? 'bg-[#024a47]/5 border-l-4 border-l-[#024a47]' : ''
-                }`}
-              >
-                <div className="w-12 h-12 bg-[#024a47] rounded-full flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
-                  {conv.otherUser.name.charAt(0).toUpperCase()}
+            {filteredConversations.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+                <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+                  <Home className="w-8 h-8 text-gray-400" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900 truncate">{conv.otherUser.name}</h3>
-                    <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
-                      {formatTime(conv.lastMessageTime)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between mt-1">
-                    <p className="text-sm text-gray-600 truncate">{conv.lastMessage}</p>
-                    {conv.unreadCount > 0 && (
-                      <span className="bg-[#024a47] text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center ml-2 flex-shrink-0">
-                        {conv.unreadCount}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">No conversations yet</h3>
+                <p className="text-sm text-gray-500">Start chatting with users to see your conversations here</p>
               </div>
-            ))}
+            ) : (
+              filteredConversations.map((conv) => (
+                <div
+                  key={conv.id}
+                  onClick={() => setSelectedConversation(conv)}
+                  className={`flex items-center space-x-3 p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
+                    selectedConversation?.id === conv.id ? 'bg-[#024a47]/5 border-l-4 border-l-[#024a47]' : ''
+                  }`}
+                >
+                  <div className="w-12 h-12 bg-[#024a47] rounded-full flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
+                    {(conv.user.name || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900 truncate">
+                        {conv.user.name || 'User'}
+                      </h3>
+                      <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
+                        {formatTime(conv.lastMessageTime)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-sm text-gray-600 truncate">{conv.lastMessage}</p>
+                      {conv.unreadCount > 0 && (
+                        <span className="bg-[#024a47] text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center ml-2 flex-shrink-0">
+                          {conv.unreadCount}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -389,13 +762,13 @@ function ChatPage() {
                     <ArrowLeft className="w-5 h-5 text-gray-600" />
                   </button>
                   <div className="w-10 h-10 bg-[#024a47] rounded-full flex items-center justify-center text-white font-semibold">
-                    {selectedConversation.otherUser.name.charAt(0).toUpperCase()}
+                    {(selectedConversation.user.name || 'U').charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <h2 className="font-semibold text-gray-900">{selectedConversation.otherUser.name}</h2>
-                    <p className="text-xs text-gray-500">
-                      {selectedConversation.otherUser.role === 'vendor' ? 'Vendor' : 'Renter'}
-                    </p>
+                    <h2 className="font-semibold text-gray-900">
+                      {selectedConversation.user.name || 'User'}
+                    </h2>
+                    <p className="text-xs text-gray-500 capitalize">User</p>
                   </div>
                 </div>
                 <button className="p-2 hover:bg-gray-100 rounded-lg">
@@ -405,50 +778,87 @@ function ChatPage() {
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-                <div className="space-y-4">
-                  {messages.map((msg) => {
-                    const isCurrentUser = msg.senderId === currentUser?.id;
-                    return (
-                      <div
-                        key={msg.id}
-                        className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div className={`flex items-end space-x-2 max-w-md ${isCurrentUser ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                          {!isCurrentUser && (
-                            <div className="w-8 h-8 bg-[#024a47] rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-                              {msg.senderName.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          <div>
-                            <div
-                              className={`px-4 py-2 rounded-2xl ${
-                                isCurrentUser
-                                  ? 'bg-[#024a47] text-white'
-                                  : 'bg-white text-gray-900 border border-gray-200'
-                              }`}
-                            >
-                              {!isCurrentUser && (
-                                <p className="text-xs font-semibold mb-1 opacity-70">{msg.senderName}</p>
-                              )}
-                              <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
-                            </div>
-                            <div className={`flex items-center space-x-1 mt-1 px-1 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
-                              <span className="text-xs text-gray-500">{formatTime(msg.timestamp)}</span>
-                              {isCurrentUser && (
-                                msg.read ? (
-                                  <CheckCheck className="w-3 h-3 text-blue-500" />
-                                ) : (
-                                  <Check className="w-3 h-3 text-gray-400" />
-                                )
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                {messages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full">
+                    <div className="text-center max-w-md">
+                      <div className="w-24 h-24 bg-[#024a47] rounded-full flex items-center justify-center text-white font-bold text-3xl mx-auto mb-6">
+                        {(selectedConversation.user.name || 'U').charAt(0).toUpperCase()}
                       </div>
-                    );
-                  })}
-                  <div ref={messagesEndRef} />
-                </div>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                        {selectedConversation.user.name || 'User'}
+                      </h2>
+                      {selectedConversation.user.email && (
+                        <p className="text-sm text-gray-600 mb-1">{selectedConversation.user.email}</p>
+                      )}
+                      {selectedConversation.user.mobile && (
+                        <p className="text-sm text-gray-600 mb-4">{selectedConversation.user.mobile}</p>
+                      )}
+                   <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+  <p className="text-gray-700 mb-4">
+    Start a conversation with <span className="font-semibold">{selectedConversation.user.name || 'this user'}</span>
+  </p>
+  <p className="text-sm text-gray-500">
+    Send your first message to begin chatting
+  </p>
+</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+               {messages.map((msg) => {
+  console.log("MESSAGES ARRAY")
+  console.log(msg)
+  const isCurrentUser = msg.sentBy === 'vendor';
+  return (
+    <div
+      key={msg.id}
+      className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
+    >
+      <div className={`flex items-end space-x-2 max-w-md ${isCurrentUser ? 'flex-row-reverse space-x-reverse' : ''}`}>
+        {!isCurrentUser && (
+          <div className="w-8 h-8 bg-[#024a47] rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+            {msg.senderName.charAt(0).toUpperCase()}
+          </div>
+        )}
+        <div>
+          <div
+            className={`px-4 py-2 rounded-2xl ${
+              isCurrentUser
+                ? 'bg-[#024a47] text-white'
+                : 'bg-white text-gray-900 border border-gray-200'
+            }`}
+          >
+            {!isCurrentUser && (
+              <p className="text-xs font-semibold mb-1 opacity-70">{msg.senderName}</p>
+            )}
+            <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+            {msg.image && (
+              <img src={msg.image} alt="attachment" className="mt-2 rounded-lg max-w-xs" />
+            )}
+          </div>
+          <div className={`flex items-center space-x-1 mt-1 px-1 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+            <span className="text-xs text-gray-500">{formatTime(msg.timestamp)}</span>
+            {/* Show read status for vendor messages */}
+            {isCurrentUser && (
+              msg.read ? (
+                <CheckCheck className="w-3 h-3 text-blue-500" />
+              ) : (
+                <Check className="w-3 h-3 text-gray-400" />
+              )
+            )}
+            {/* Show read status for user messages (when vendor has seen them) */}
+            {!isCurrentUser && msg.read && (
+              <CheckCheck className="w-3 h-3 text-blue-500" />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+})}
+                    <div ref={messagesEndRef} />
+                  </div>
+                )}
               </div>
 
               {/* Message Input */}
@@ -456,7 +866,21 @@ function ChatPage() {
                 <div className="flex items-end space-x-2">
                   <textarea
                     value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
+                    onChange={(e) => {
+                      setNewMessage(e.target.value);
+                      
+                      // Emit typing indicator
+                      if (socketRef?.socket && selectedConversation) {
+                        socketRef.socket.emit('typing', {
+                          conversationId: selectedConversation.user._id,
+                          userId: selectedConversation.user._id,
+                          vendorId: localStorage.getItem('vendorId'),
+                          receiverId: selectedConversation.user._id,
+                          isTyping: e.target.value.length > 0,
+                          typerType: 'vendor'
+                        });
+                      }
+                    }}
                     onKeyPress={handleKeyPress}
                     placeholder="Type a message..."
                     rows="1"
@@ -484,7 +908,7 @@ function ChatPage() {
                   <Home className="w-10 h-10 text-gray-400" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-700 mb-2">Welcome to Messages</h3>
-                <p>Select a conversation to start chatting</p>
+                <p>Select a conversation to start chatting with users</p>
               </div>
             </div>
           )}
