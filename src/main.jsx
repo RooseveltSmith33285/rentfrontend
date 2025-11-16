@@ -59,7 +59,7 @@ import UserChatPage from './pages/chat.jsx'
 import SocketProvider from './context/socketContext.jsx'
 import VendorRequestsListPage from './vendor/vendorrequestlist.jsx'
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_SECRET);
+const stripePromise = loadStripe("pk_test_51OwuO4LcfLzcwwOYdssgGfUSfOgWT1LwO6ewi3CEPewY7WEL9ATqH6WJm3oAcLDA3IgUvVYLVEBMIEu0d8fUwhlw009JwzEYmV");
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

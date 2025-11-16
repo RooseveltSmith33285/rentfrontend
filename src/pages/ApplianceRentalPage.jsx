@@ -39,6 +39,32 @@ export default function ApplianceRentalPage() {
     applyFilters();
   }, [appliances, selectedCategory, selectedPriceRange]);
 
+  // 🚀 NEW: Sort appliances by boost status and amount
+  const sortByBoost = (appliancesList) => {
+    return [...appliancesList].sort((a, b) => {
+      // Check if boost is active (not expired)
+      const now = new Date();
+      const aBoostActive = a.visibility?.isBoosted && 
+                          a.visibility?.boostEndDate && 
+                          new Date(a.visibility.boostEndDate) > now;
+      const bBoostActive = b.visibility?.isBoosted && 
+                          b.visibility?.boostEndDate && 
+                          new Date(b.visibility.boostEndDate) > now;
+      
+      // Get boost amounts (default to 0 if not boosted or expired)
+      const aBoostAmount = aBoostActive ? (a.visibility?.boostAmount || 0) : 0;
+      const bBoostAmount = bBoostActive ? (b.visibility?.boostAmount || 0) : 0;
+      
+      // Sort by boost amount (highest first)
+      if (bBoostAmount !== aBoostAmount) {
+        return bBoostAmount - aBoostAmount;
+      }
+      
+      // If boost amounts are equal, sort by creation date (newest first)
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+  };
+
   const applyFilters = () => {
     let filtered = [...appliances];
 
@@ -66,6 +92,9 @@ export default function ApplianceRentalPage() {
         return price >= selectedPriceRange.min && price <= selectedPriceRange.max;
       });
     }
+
+    // 🚀 Sort by boost amount after filtering
+    filtered = sortByBoost(filtered);
 
     setFilteredAppliances(filtered);
   };
@@ -138,7 +167,11 @@ export default function ApplianceRentalPage() {
   const getProducts = async () => {
     try {
       let response = await axios.get(`${BASE_URL}/getUserListenings`);
-      setAppliances(response.data.listenings || []);
+      const listenings = response.data.listenings || [];
+      
+      // 🚀 Sort by boost immediately when fetching
+      const sortedListenings = sortByBoost(listenings);
+      setAppliances(sortedListenings);
     } catch (e) {
       if (e?.response?.data?.error) {
         toast.dismiss();
@@ -175,28 +208,42 @@ export default function ApplianceRentalPage() {
     }
   };
 
-const handleReject=async(appliance)=>{
-  try{
-   
-let response=await axios.patch(`${BASE_URL}/rejectOffer/${appliance._id}`)
+  const handleReject = async(appliance) => {
+    try {
+      let response = await axios.patch(`${BASE_URL}/rejectOffer/${appliance._id}`)
 
-setRequests(prev =>
-  prev.map(req =>
-    req.listing === appliance._id
-      ? { ...req, status: 'rejected' }
-      : req
-  )
-);
+      setRequests(prev =>
+        prev.map(req =>
+          req.listing === appliance._id
+            ? { ...req, status: 'rejected' }
+            : req
+        )
+      );
 
-alert("Offer rejected sucessfully")
-}catch(e){
-  if(e?.response?.data?.error){
-alert(e?.response?.data?.error)
-  }else{
-alert("Error occured while trying to reject offer")
+      alert("Offer rejected sucessfully")
+    } catch(e) {
+      if(e?.response?.data?.error) {
+        alert(e?.response?.data?.error)
+      } else {
+        alert("Error occured while trying to reject offer")
+      }
+    }
   }
-  }
-}
+
+  // 🎨 NEW: Helper to check if boost is active
+  const isBoostActive = (appliance) => {
+    if (!appliance.visibility?.isBoosted) return false;
+    if (!appliance.visibility?.boostEndDate) return false;
+    return new Date(appliance.visibility.boostEndDate) > new Date();
+  };
+
+  // 🎨 NEW: Helper to get boost badge color based on amount
+  const getBoostBadgeColor = (boostAmount) => {
+    if (boostAmount >= 100) return 'bg-gradient-to-r from-yellow-400 to-orange-500';
+    if (boostAmount >= 50) return 'bg-gradient-to-r from-blue-500 to-purple-600';
+    if (boostAmount >= 10) return 'bg-gradient-to-r from-green-400 to-blue-500';
+    return 'bg-gradient-to-r from-gray-400 to-gray-600';
+  };
 
   const displayAppliances = filteredAppliances.length > 0 || selectedCategory || selectedPriceRange 
     ? filteredAppliances 
@@ -378,7 +425,24 @@ alert("Error occured while trying to reject offer")
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6 mb-8">
                 {displayAppliances.map((appliance) => (
-                  <div key={appliance._id} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full">
+                  <div 
+                    key={appliance._id} 
+                    className={`bg-white rounded-xl border p-4 shadow-sm hover:shadow-md transition-all flex flex-col h-full relative ${
+                      isBoostActive(appliance) 
+                        ? 'border-2 border-yellow-400 ring-2 ring-yellow-200' 
+                        : 'border-gray-200'
+                    }`}
+                  >
+                    {/* 🚀 BOOSTED BADGE */}
+                    {isBoostActive(appliance) && (
+                      <div className="absolute -top-3 -right-3 z-10">
+                        <div className={`${getBoostBadgeColor(appliance.visibility.boostAmount)} text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center gap-1`}>
+                          <span>⚡</span>
+                          <span>BOOSTED ${appliance.visibility.boostAmount}</span>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Vendor Header */}
                     <div className="flex items-center mb-4">
                       <img 

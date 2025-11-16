@@ -39,7 +39,7 @@ function VendorDashboard() {
       
       if (err.response?.status === 401) {
         localStorage.removeItem('token');
-        navigate('/login');
+        navigate('/vendorlogin');
       }
     } finally {
       setLoading(false);

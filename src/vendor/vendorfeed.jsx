@@ -73,7 +73,7 @@ function VendorFeed() {
       
       if (!token) {
         setError('Please log in to view your listings');
-        navigate('/login');
+        navigate('/vendorlogin');
         return;
       }
 
@@ -108,7 +108,7 @@ function VendorFeed() {
       
       if (err.response?.status === 401) {
         localStorage.removeItem('token');
-        navigate('/login');
+        navigate('/vendorlogin');
       }
     } finally {
       setLoading(false);
