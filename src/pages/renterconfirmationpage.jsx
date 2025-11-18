@@ -19,6 +19,7 @@ export default function UnitPurchasePage() {
   const [showPayment, setShowPayment] = useState(false);
   const [orderConfirmed, setOrderConfirmed] = useState(false);
   const [confirmationNumber, setConfirmationNumber] = useState('');
+  const [credits,setCredits]=useState(0)
 
   useEffect(() => {
     const id = searchParams.get('id');
@@ -42,7 +43,10 @@ export default function UnitPurchasePage() {
       
       if (response.ok) {
         const data = await response.json();
+        setCredits(data.credits)
         setRequest(data.request);
+      
+    
       } else {
         alert('Error fetching request details');
       }
@@ -59,7 +63,6 @@ export default function UnitPurchasePage() {
     setShowPayment(true);
   };
 
- 
   const handlePayment = async () => {
     if (!stripe || !elements) {
       return;
@@ -89,11 +92,21 @@ export default function UnitPurchasePage() {
         return;
       }
 
+      const totalBeforeCredits = getTotalBeforeCredits();
+      const creditsApplied = getCreditsApplied();
+      const finalTotal = calculateTotal();
+      const newCredits = credits - creditsApplied; // Calculate remaining credits
+      
+      
       const response = await axios.post(`${BASE_URL}/approveOfferByUser`, 
         { 
           id, 
-          totalPrice,
+          totalPrice: finalTotal, // Send final amount after credits
+          creditsUsed: creditsApplied, // Send credits used
+          totalBeforeCredits: totalBeforeCredits, // Send original total
           paymentMethodId: paymentMethod.id,
+          totalBeforeCredits: totalBeforeCredits, // Send original total
+    newCredits: newCredits,
           deliveryType: request.deliveryType || 'standard',
           installationType: request.installationType || 'professional',
           deliveryAddress: {
@@ -131,14 +144,18 @@ export default function UnitPurchasePage() {
         
         const confNumber = response.data.orderId || Math.floor(10000 + Math.random() * 90000);
         setConfirmationNumber(confNumber.toString());
+        
+        // Success alert
+        alert('✅ Payment successful! Your order has been confirmed.');
+        
         setOrderConfirmed(true);
         setTimeout(()=>{
-navigate('/appliance')
-        },500)
+          navigate('/appliance')
+        }, 2000)
       }
     } catch (e) {
       console.error('Error:', e);
-      alert('Error processing payment: ' + (e.response?.data?.error || e.message));
+      alert('❌ Error processing payment: ' + (e.response?.data?.error || e.message));
     } finally {
       setProcessing(false);
     }
@@ -152,12 +169,14 @@ navigate('/appliance')
       try {
         const id = searchParams.get('id');
         let response = await axios.patch(`${BASE_URL}/rejectRequestOffer/${id}`)
-        // Call your deny endpoint
-        alert('Offer denied');
+        
+        // Success alert
+        alert('✅ Offer denied successfully');
+        
         navigate('/appliance')
       } catch (e) {
         console.error('Error:', e);
-        alert('Error denying offer');
+        alert('❌ Error denying offer: ' + (e.response?.data?.error || e.message));
       } finally {
         setProcessing(false);
       }
@@ -192,13 +211,34 @@ navigate('/appliance')
   };
 
   // Calculate total with service fee
-  const calculateTotal = () => {
-    const rentPrice = request?.listing?.pricing?.rentPrice || 60;
-    const deliveryFee = 60;
-    const subtotal = rentPrice + deliveryFee;
-    const serviceFee = 12; // Can be calculated as percentage if needed
-    return subtotal + serviceFee;
-  };
+// Calculate total with service fee and apply credits
+const calculateTotal = () => {
+  const rentPrice = request?.listing?.pricing?.rentPrice || 60;
+  const deliveryFee = 60;
+  const subtotal = rentPrice + deliveryFee;
+  const serviceFee = 12;
+  const totalBeforeCredits = subtotal + serviceFee;
+  
+  // Apply credits (cannot go below 0)
+  const finalTotal = Math.max(0, totalBeforeCredits - credits);
+  return finalTotal;
+};
+
+// Helper to get amount before credits
+const getTotalBeforeCredits = () => {
+  const rentPrice = request?.listing?.pricing?.rentPrice || 60;
+  const deliveryFee = 60;
+  const subtotal = rentPrice + deliveryFee;
+  const serviceFee = 12;
+  return subtotal + serviceFee;
+};
+
+// Helper to get credits applied
+const getCreditsApplied = () => {
+  const totalBefore = getTotalBeforeCredits();
+  return Math.min(credits, totalBefore);
+};
+
 
   // Show Payment Screen
  // Show Payment Screen
@@ -216,7 +256,32 @@ navigate('/appliance')
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6 relative">
+      {/* Loading Overlay */}
+      {processing && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl p-8 shadow-xl max-w-md w-full mx-4">
+            <div className="text-center">
+              <div className="relative inline-flex items-center justify-center mb-6">
+                {/* Outer rotating circle */}
+                <div className="animate-spin rounded-full h-24 w-24 border-4 border-gray-200"></div>
+                {/* Inner rotating circle */}
+                <div className="absolute animate-spin rounded-full h-24 w-24 border-4 border-[#004d40] border-t-transparent"></div>
+                {/* Center icon */}
+                <div className="absolute">
+                  <svg className="w-10 h-10 text-[#004d40]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                </div>
+              </div>
+              <p className="text-2xl font-bold text-gray-900 mb-2">Processing Payment...</p>
+              <p className="text-gray-600">Please wait while we process your transaction</p>
+              <p className="text-sm text-gray-500 mt-4">Do not close this window</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-2xl">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-4xl font-bold text-gray-900">Payment</h1>
@@ -242,27 +307,98 @@ navigate('/appliance')
               <p className="text-2xl font-semibold text-gray-900">${request.listing?.pricing?.rentPrice}/mo</p>
             </div>
           </div>
+{/* Available Credits Banner */}
+{credits > 0 && (
+  <div className="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-5">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center space-x-3">
+        <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+          <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-green-700 uppercase tracking-wide">Available Credits</p>
+          <p className="text-3xl font-bold text-green-900">${credits.toFixed(2)}</p>
+        </div>
+      </div>
+      <div className="text-right">
+        <p className="text-sm text-green-700 font-medium">Auto-applied</p>
+        <p className="text-xs text-green-600">to your order</p>
+      </div>
+    </div>
+  </div>
+)}
 
           {/* Cost Breakdown */}
-          <div className="space-y-4 mb-6">
-            <div className="flex justify-between text-xl text-gray-900">
-              <span>First month rent</span>
-              <span>${request.listing?.pricing?.rentPrice}</span>
-            </div>
-            <div className="flex justify-between text-xl text-gray-900">
-              <span>Installation & delivery</span>
-              <span>$60</span>
-            </div>
-          </div>
+{/* Cost Breakdown */}
+{/* Cost Breakdown */}
+<div className="space-y-4 mb-6">
+  <div className="flex justify-between text-xl text-gray-900">
+    <span>First month rent</span>
+    <span>${request.listing?.pricing?.rentPrice}</span>
+  </div>
+  <div className="flex justify-between text-xl text-gray-900">
+    <span>Installation & delivery</span>
+    <span>$60</span>
+  </div>
+  <div className="flex justify-between text-lg text-gray-600">
+    <span>Service fee</span>
+    <span>$12</span>
+  </div>
+</div>
+
+{/* Credits Used Section - ADD THIS */}
+{getCreditsApplied() > 0 && (
+  <div className="border-t border-gray-200 pt-4 mb-4">
+    <div className="flex justify-between items-center text-xl bg-green-50 -mx-4 px-4 py-3 rounded-xl">
+      <div className="flex items-center space-x-2">
+        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span className="font-semibold text-green-700">Credits Used</span>
+      </div>
+      <span className="font-bold text-green-700">-${getCreditsApplied().toFixed(2)}</span>
+    </div>
+  </div>
+)}
+
+{/* Total */}
+
+
+{/* Total */}
+<div className="border-t border-gray-200 pt-6 mb-8"></div>
 
           {/* Total */}
-          <div className="border-t border-gray-200 pt-6 mb-6">
-            <div className="flex justify-between items-baseline mb-2">
-              <span className="text-2xl font-bold text-gray-900">Total due</span>
-              <span className="text-3xl font-bold text-gray-900">${calculateTotal()}</span>
-            </div>
-            <p className="text-gray-600 text-sm">Includes service fee</p>
-          </div>
+        {/* Total */}
+<div className="border-t border-gray-200 pt-6 mb-6">
+  {credits > 0 && (
+    <>
+      <div className="flex justify-between text-xl text-gray-900 mb-3">
+        <span>Subtotal</span>
+        <span>${getTotalBeforeCredits()}</span>
+      </div>
+      
+      <div className="flex justify-between items-center text-xl mb-4 bg-green-50 -mx-4 px-4 py-3 rounded-xl">
+        <div className="flex items-center space-x-2">
+          <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="font-semibold text-green-700">Credits Applied</span>
+        </div>
+        <span className="font-bold text-green-700">-${getCreditsApplied().toFixed(2)}</span>
+      </div>
+    </>
+  )}
+  
+  <div className="flex justify-between items-baseline mb-2 pt-4 border-t border-gray-200">
+    <span className="text-2xl font-bold text-gray-900">Total due</span>
+    <span className="text-3xl font-bold text-gray-900">${calculateTotal().toFixed(2)}</span>
+  </div>
+  <p className="text-gray-600 text-sm">
+    {credits > 0 ? 'After credits applied' : 'Includes service fee'}
+  </p>
+</div>
 
           {/* Card Details Form with Stripe Elements */}
           <div className="space-y-4 mb-6">
@@ -291,13 +427,21 @@ navigate('/appliance')
           </div>
 
           {/* Pay Button */}
-          <button 
-            onClick={handlePayment}
-            disabled={processing || !stripe}
-            className="w-full bg-[#004d40] hover:bg-[#00635a] text-white text-2xl font-semibold py-5 rounded-2xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {processing ? 'Processing...' : `Pay $${calculateTotal()}`}
-          </button>
+      {/* Pay Button */}
+      <button 
+  onClick={handlePayment}
+  disabled={processing || !stripe}
+  className="w-full bg-[#004d40] hover:bg-[#00635a] text-white text-2xl font-semibold py-5 rounded-2xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+>
+  {processing ? (
+    <>
+      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-3"></div>
+      Processing Payment...
+    </>
+  ) : (
+    `Pay $${calculateTotal().toFixed(2)}`
+  )}
+</button>
 
           <p className="text-center text-gray-600 mt-4">By continuing, you agree to rental terms.</p>
         </div>
@@ -334,23 +478,45 @@ if (orderConfirmed) {
           </div>
 
           {/* Cost Breakdown */}
-          <div className="space-y-4 mb-6">
-            <div className="flex justify-between text-xl text-gray-900">
-              <span>First month rent</span>
-              <span>${request.listing?.pricing?.rentPrice}</span>
-            </div>
-            <div className="flex justify-between text-xl text-gray-900">
-              <span>Installation & delivery</span>
-              <span>$60</span>
-            </div>
-          </div>
+      {/* Cost Breakdown */}
+<div className="space-y-4 mb-6">
+  <div className="flex justify-between text-xl text-gray-900">
+    <span>First month rent</span>
+    <span>${request.listing?.pricing?.rentPrice}</span>
+  </div>
+  <div className="flex justify-between text-xl text-gray-900">
+    <span>Installation & delivery</span>
+    <span>$60</span>
+  </div>
+  <div className="flex justify-between text-lg text-gray-600">
+    <span>Service fee</span>
+    <span>$12</span>
+  </div>
+</div>
 
+{/* Credits Used Section - ADD THIS */}
+{getCreditsApplied() > 0 && (
+  <div className="border-t border-gray-200 pt-4 mb-4">
+    <div className="flex justify-between items-center text-xl bg-green-50 -mx-4 px-4 py-3 rounded-xl">
+      <div className="flex items-center space-x-2">
+        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span className="font-semibold text-green-700">Credits Used</span>
+      </div>
+      <span className="font-bold text-green-700">-${getCreditsApplied().toFixed(2)}</span>
+    </div>
+  </div>
+)}
+
+{/* Total */}
+<div className="border-t border-gray-200 pt-6 mb-8"></div>
           {/* Total */}
           <div className="border-t border-gray-200 pt-6 mb-8">
-            <div className="flex justify-between items-baseline">
-              <span className="text-2xl font-bold text-gray-900">Total paid</span>
-              <span className="text-3xl font-bold text-gray-900">${calculateTotal()}</span>
-            </div>
+          <div className="flex justify-between items-baseline">
+  <span className="text-2xl font-bold text-gray-900">Total paid</span>
+  <span className="text-3xl font-bold text-gray-900">${calculateTotal().toFixed(2)}</span>
+</div>
           </div>
 
           {/* Success Message */}
@@ -481,6 +647,25 @@ if (orderConfirmed) {
           </div>
         )}
 
+{/* Credits Available Badge */}
+{credits > 0 && (
+  <div className="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-2xl p-6">
+    <div className="flex items-center space-x-4">
+      <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-green-700 uppercase tracking-wide mb-1">You have credits!</p>
+        <p className="text-4xl font-bold text-green-900">${credits.toFixed(2)}</p>
+        <p className="text-sm text-green-600 mt-1">Will be applied at checkout</p>
+      </div>
+    </div>
+  </div>
+)}
+
+
         {/* Price Section */}
         <div className="flex items-center justify-between mb-8">
           <span className="text-3xl font-bold text-gray-900">Monthly Rent</span>
@@ -488,21 +673,38 @@ if (orderConfirmed) {
         </div>
 
         {/* Action Buttons */}
-        <div className="space-y-4">
+    {/* Action Buttons */}
+    <div className="space-y-4">
           <button 
             onClick={handleApprove}
             disabled={processing || request.approvedByUser}
-            className="w-full bg-[#004d40] hover:bg-[#00635a] text-white text-2xl font-semibold py-5 rounded-2xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-[#004d40] hover:bg-[#00635a] text-white text-2xl font-semibold py-5 rounded-2xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           >
-            {processing ? 'Processing...' : request.approvedByUser ? 'Already Approved' : 'Approve Offer'}
+            {processing ? (
+              <>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-3"></div>
+                Processing...
+              </>
+            ) : request.approvedByUser ? (
+              'Already Approved'
+            ) : (
+              'Approve Offer'
+            )}
           </button>
          
           <button 
             onClick={handleDeny}
             disabled={processing || request.approvedByUser}
-            className="w-full bg-white hover:bg-gray-50 text-gray-900 text-2xl font-semibold py-5 rounded-2xl border-2 border-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-white hover:bg-gray-50 text-gray-900 text-2xl font-semibold py-5 rounded-2xl border-2 border-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           >
-            Deny Offer
+            {processing ? (
+              <>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mr-3"></div>
+                Processing...
+              </>
+            ) : (
+              'Deny Offer'
+            )}
           </button>
         </div>
       </div>

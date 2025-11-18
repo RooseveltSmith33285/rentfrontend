@@ -23,7 +23,7 @@ function CommunityPostPage() {
   const fetchListings = async () => {
     setFetchingListings(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       
       if (!token) {
         console.error('No token found');
@@ -145,7 +145,7 @@ function CommunityPostPage() {
     setSuccess(false);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       const formData = new FormData();
       
       formData.append('type', postType);

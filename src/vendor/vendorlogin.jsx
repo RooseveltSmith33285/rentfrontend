@@ -38,7 +38,7 @@ function VendorLogin() {
         password: formData.password
       });
       
-      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('vendorToken', response.data.token);
       localStorage.setItem('vendorId', response.data.vendor._id);
       
       if (formData.rememberMe) {

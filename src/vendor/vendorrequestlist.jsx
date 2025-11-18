@@ -8,6 +8,11 @@ export default function VendorRequestsListPage() {
   const [filteredRequests, setFilteredRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [operationalChecks, setOperationalChecks] = useState({
+    properOperation: false,
+    locationConfirmed: false,
+    safeToInstall: false
+  });
   const [processingId, setProcessingId] = useState(null);
   const [uploadedPhotos, setUploadedPhotos] = useState({
     front: null,
@@ -23,6 +28,10 @@ export default function VendorRequestsListPage() {
     serialTag: null,
     condition: null
   });
+
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectRequestId, setRejectRequestId] = useState(null);
 
   useEffect(() => {
     getVendorRequests();
@@ -49,7 +58,7 @@ export default function VendorRequestsListPage() {
   const getVendorRequests = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       const response = await fetch(`${BASE_URL}/getVendorRequests`, {
         headers: {
           Authorization: `Bearer ${token}`
@@ -68,20 +77,36 @@ export default function VendorRequestsListPage() {
 
 
   const handleReject = async (requestId) => {
+    setRejectRequestId(requestId);
+    setShowRejectModal(true);
+  };
+
+  const confirmReject = async () => {
+    if (!rejectReason) {
+      alert('Please select a reason for rejection');
+      return;
+    }
+    
     try {
-      setProcessingId(requestId);
-      const token = localStorage.getItem('token');
+      setProcessingId(rejectRequestId);
+      const token = localStorage.getItem('vendorToken');
       const response = await fetch(`${BASE_URL}/rejectRequest`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ id:requestId })
+        body: JSON.stringify({ 
+          id: rejectRequestId,
+          reason: rejectReason 
+        })
       });
       
       if (response.ok) {
         alert('Request rejected');
+        setShowRejectModal(false);
+        setRejectReason('');
+        setRejectRequestId(null);
         getVendorRequests();
       } else {
         const data = await response.json();
@@ -93,6 +118,7 @@ export default function VendorRequestsListPage() {
     } finally {
       setProcessingId(null);
     }
+  
   };
 
   const getPrimaryImage = (images) => {
@@ -116,16 +142,111 @@ export default function VendorRequestsListPage() {
 
 
 
+  const RejectModal = () => {
+    const rejectReasons = [
+      'Unit No Longer Available',
+      'Delivery Location Not Serviceable',
+      'Scheduling Conflict',
+      'Condition / Maintenance Check Needed',
+      'Renter History or Profile Concerns',
+      'Incorrect or Incomplete Renter Information',
+      'Unit Mis-Listed'
+    ];
 
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-900">Reject Request</h2>
+              <button 
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectReason('');
+                  setRejectRequestId(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <p className="text-gray-600 mb-4">Please select a reason for rejecting this request:</p>
+
+            <div className="space-y-2 mb-6">
+              {rejectReasons.map((reason) => (
+                <label
+                  key={reason}
+                  className={`flex items-start p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                    rejectReason === reason
+                      ? 'border-red-600 bg-red-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="rejectReason"
+                    value={reason}
+                    checked={rejectReason === reason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    className="mt-1 mr-3 text-red-600 focus:ring-red-500"
+                  />
+                  <span className="text-sm text-gray-900">{reason}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectReason('');
+                  setRejectRequestId(null);
+                }}
+                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmReject}
+                disabled={!rejectReason || processingId === rejectRequestId}
+                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              >
+                {processingId === rejectRequestId ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                ) : (
+                  'Confirm Rejection'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+
+  
   const PreDeliveryProcess = ({ onClose, onSubmit }) => {
     const [photos, setPhotos] = useState({
-      front: false,
-      side: false,
-      serialTag: false,
-      condition: false
+      front: null,
+      side: null,
+      serialTag: null,
+      condition: null
+    });
+    
+    const [uploadingPhoto, setUploadingPhoto] = useState(null);
+
+   
+    const [operationalChecks, setOperationalChecks] = useState({
+      properOperation: false,
+      locationConfirmed: false,
+      safeToInstall: false
     });
   
-    const handlePhotoUpload = (type, event) => {
+    const handlePhotoUpload = async (type, event) => {
       const file = event.target.files[0];
       if (file) {
         if (file.size > 5 * 1024 * 1024) { // 5MB limit
@@ -136,26 +257,62 @@ export default function VendorRequestsListPage() {
           alert('Please upload an image file');
           return;
         }
+        
+        setUploadingPhoto(type);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
         setPhotos(prev => ({ ...prev, [type]: file }));
+        setUploadingPhoto(null);
       }
     };
+
     
     const removePhoto = (type) => {
       setPhotos(prev => ({ ...prev, [type]: null }));
     };
   
     const handleSubmit = () => {
-      const allPhotosComplete = Object.values(photos).every(photo => photo !== null);
-      if (!allPhotosComplete) {
-        alert('Please upload all required photos before submitting.');
-        return;
-      }
+      const allPhotosComplete = Object.values(photos).every(photo => photo);
+  
+  if (!allPhotosComplete) {
+    alert('Please upload all required photos before submitting.');
+    return;
+  }
+if(!operationalChecks.properOperation){
+alert("Please check operation checkbox")
+return
+}else if(!operationalChecks.locationConfirmed){
+  alert("Please check location checkbox")
+  return
+}else if(!operationalChecks.safeToInstall){
+  alert("Please check safe to install checkbox")
+  return
+}
       onSubmit(photos); // Pass photos to parent if needed
     };
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-3xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-3xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto relative">
+        {/* Loading Overlay */}
+        {loading && (
+          <div className="absolute inset-0 bg-white bg-opacity-95 rounded-3xl flex items-center justify-center z-50">
+            <div className="text-center">
+              <div className="relative inline-flex items-center justify-center">
+                {/* Outer rotating circle */}
+                <div className="animate-spin rounded-full h-24 w-24 border-4 border-gray-200"></div>
+                {/* Inner rotating circle */}
+                <div className="absolute animate-spin rounded-full h-24 w-24 border-4 border-green-900 border-t-transparent"></div>
+                {/* Center checkmark */}
+                <div className="absolute">
+                  <Check className="w-10 h-10 text-green-900" strokeWidth={3} />
+                </div>
+              </div>
+              <p className="mt-6 text-xl font-semibold text-gray-900">Processing Request...</p>
+              <p className="mt-2 text-sm text-gray-600">Please wait while we approve this rental</p>
+            </div>
+          </div>
+        )}
           <div className="p-8">
             {/* Header with Close Button */}
             <div className="flex items-center justify-between mb-8">
@@ -196,16 +353,27 @@ export default function VendorRequestsListPage() {
           accept="image/*"
           className="hidden"
           onChange={(e) => handlePhotoUpload(item.key, e)}
+          disabled={uploadingPhoto !== null || loading}
         />
         <label
           htmlFor={`upload-${item.key}`}
-          className={`aspect-square rounded-2xl border-2 flex flex-col items-center justify-center gap-3 transition-all cursor-pointer ${
+          className={`aspect-square rounded-2xl border-2 flex flex-col items-center justify-center gap-3 transition-all ${
+            (uploadingPhoto !== null || loading) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+          } ${
             photos[item.key]
               ? 'bg-green-100 border-green-300'
               : 'bg-gray-100 border-gray-300 hover:bg-gray-200'
           }`}
         >
-          {photos[item.key] ? (
+          {uploadingPhoto === item.key ? (
+            <div className="flex flex-col items-center gap-2">
+              <div className="relative inline-flex">
+                <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-200"></div>
+                <div className="absolute inset-0 animate-spin rounded-full h-10 w-10 border-2 border-green-900 border-t-transparent"></div>
+              </div>
+              <span className="text-xs font-medium text-gray-700">Uploading...</span>
+            </div>
+          ) : photos[item.key] ? (
             <>
               <div className="w-full h-full rounded-2xl overflow-hidden p-2">
                 <img
@@ -247,39 +415,56 @@ export default function VendorRequestsListPage() {
 </div>
             {/* Operational Test Section */}
             <div className="border border-gray-200 rounded-2xl p-6 mb-6">
-              <div className="flex items-start gap-4 mb-4">
-                <div className="w-8 h-8 bg-green-900 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Check className="w-5 h-5 text-white" strokeWidth={3} />
-                </div>
-                <h3 className="text-2xl font-bold">Operational Test</h3>
-              </div>
-  
-              <div className="ml-12 space-y-3">
-                <p className="text-gray-700 text-lg mb-4">Perform function checks</p>
-                
-                <div className="flex items-center gap-3">
-                  <div className="w-6 h-6 bg-green-900 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Check className="w-4 h-4 text-white" strokeWidth={3} />
-                  </div>
-                  <span className="text-lg text-gray-900">Verify proper operation</span>
-                </div>
-  
-                <div className="flex items-center gap-3">
-                  <div className="w-6 h-6 bg-green-900 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Check className="w-4 h-4 text-white" strokeWidth={3} />
-                  </div>
-                  <span className="text-lg text-gray-900">Desired location confirmed</span>
-                </div>
-  
-                <div className="flex items-center gap-3">
-                  <div className="w-6 h-6 bg-green-900 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Check className="w-4 h-4 text-white" strokeWidth={3} />
-                  </div>
-                  <span className="text-lg text-gray-900">Safe to install</span>
-                </div>
-              </div>
-            </div>
-  
+  <div className="flex items-start gap-4 mb-4">
+    <div className="w-8 h-8 bg-green-900 rounded-full flex items-center justify-center flex-shrink-0">
+      <Check className="w-5 h-5 text-white" strokeWidth={3} />
+    </div>
+    <h3 className="text-2xl font-bold">Operational Test</h3>
+  </div>
+
+  <div className="ml-12 space-y-3">
+    <p className="text-gray-700 text-lg mb-4">Perform function checks</p>
+    
+    <div 
+      onClick={() => !loading && setOperationalChecks({...operationalChecks, properOperation: !operationalChecks.properOperation})}
+      className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
+        loading ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-gray-50'
+      }`}
+    >
+      <div className={`w-6 h-6 ${operationalChecks.properOperation ? 'bg-green-900' : 'bg-gray-200'} rounded-full flex items-center justify-center flex-shrink-0 transition-colors`}>
+        {operationalChecks.properOperation && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
+      </div>
+      <span className="text-lg text-gray-900">Verify proper operation</span>
+    </div>
+
+    <div 
+      onClick={() => setOperationalChecks({...operationalChecks, locationConfirmed: !operationalChecks.locationConfirmed})}
+      className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
+    >
+      <div className={`w-6 h-6 ${operationalChecks.locationConfirmed ? 'bg-green-900' : 'bg-gray-200'} rounded-full flex items-center justify-center flex-shrink-0 transition-colors`}>
+        {operationalChecks.locationConfirmed && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
+      </div>
+      <span className="text-lg text-gray-900">Desired location confirmed</span>
+    </div>
+
+    <div 
+      onClick={() => setOperationalChecks({...operationalChecks, safeToInstall: !operationalChecks.safeToInstall})}
+      className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
+    >
+      <div className={`w-6 h-6 ${operationalChecks.safeToInstall ? 'bg-green-900' : 'bg-gray-200'} rounded-full flex items-center justify-center flex-shrink-0 transition-colors`}>
+        {operationalChecks.safeToInstall && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
+      </div>
+      <span className="text-lg text-gray-900">Safe to install</span>
+    </div>
+  </div>
+</div>
+
+{/* Add this before your submit button */}
+<div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+  <p className="text-sm text-gray-700">
+    By clicking Submit, you confirm the unit is in good working condition and agree to resolve any issues by communicating with the renter through the RentSimple platform.
+  </p>
+</div>
             {/* Unit Ready Section */}
             <div className="border border-gray-200 rounded-2xl p-6 mb-6">
               <div className="flex items-start gap-4">
@@ -291,11 +476,20 @@ export default function VendorRequestsListPage() {
             </div>
   
             {/* Submit Button */}
-            <button 
+         {/* Submit Button */}
+         <button 
               onClick={handleSubmit}
-              className="w-full bg-green-900 hover:bg-green-800 text-white text-xl font-semibold py-4 rounded-2xl transition-colors"
+              disabled={loading}
+              className="w-full bg-green-900 hover:bg-green-800 text-white text-xl font-semibold py-4 rounded-2xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
-              Submit
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-2"></div>
+                  Processing...
+                </>
+              ) : (
+                'Submit'
+              )}
             </button>
           </div>
         </div>
@@ -312,7 +506,8 @@ export default function VendorRequestsListPage() {
   const handlePreDeliverySubmit = async (photos) => {
     try {
       setProcessingId(selectedRequestId);
-      const token = localStorage.getItem('token');
+      setLoading(true);
+      const token = localStorage.getItem('vendorToken');
       
       const formData = new FormData();
       formData.append('id', selectedRequestId);
@@ -334,7 +529,7 @@ export default function VendorRequestsListPage() {
         alert('Request approved successfully!');
         setShowPreDelivery(false);
         setSelectedRequestId(null);
-        getVendorRequests();
+        await getVendorRequests();
       } else {
         const data = await response.json();
         alert(data.error || 'Error approving request');
@@ -344,6 +539,7 @@ export default function VendorRequestsListPage() {
       alert('Error approving request. Please try again.');
     } finally {
       setProcessingId(null);
+      setLoading(false);
     }
   };
   const getStatusBadge = (status) => {
@@ -356,7 +552,25 @@ export default function VendorRequestsListPage() {
           Pending
         </span>
       );
-    } else if (status === 'approved') {
+    } else if(status=="pending_confirmation"){
+      return (
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-800">
+          <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+          </svg>
+          Pending delivery confirmation
+        </span>
+      );
+    }else if(status=="confirmed"){
+      return (
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-800">
+          <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+          </svg>
+          Delivery confirmed
+        </span>
+      );
+    }else if (status === 'approved') {
       return (
         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800">
           <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
@@ -382,7 +596,7 @@ export default function VendorRequestsListPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#024a47] mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading requests...</p>
+          <p className="text-gray-600">Sending request...</p>
         </div>
       </div>
     );
@@ -508,18 +722,8 @@ export default function VendorRequestsListPage() {
                           </svg>
                           <span className="font-medium">{request?.user?.name || 'N/A'}</span>
                         </div>
-                        <div className="flex items-center text-gray-700">
-                          <svg className="w-5 h-5 mr-2 text-[#024a47]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                          </svg>
-                          <span className="text-sm">{request?.user?.email || 'N/A'}</span>
-                        </div>
-                        <div className="flex items-center text-gray-700">
-                          <svg className="w-5 h-5 mr-2 text-[#024a47]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                          </svg>
-                          <span className="text-sm">{request?.user?.mobile || 'N/A'}</span>
-                        </div>
+                     
+                     
                         {request?.deliveryType && (
                           <div className="flex items-center text-gray-700">
                             <svg className="w-5 h-5 mr-2 text-[#024a47]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -597,6 +801,8 @@ export default function VendorRequestsListPage() {
     onSubmit={handlePreDeliverySubmit}
   />
 )}
+
+      {showRejectModal && <RejectModal />}
     </div>
   );
 }

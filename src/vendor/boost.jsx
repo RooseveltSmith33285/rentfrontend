@@ -28,7 +28,7 @@ export default function BoostListingPage() {
       try {
         setLoading(true);
         setError(null);
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('vendorToken');
         const response = await fetch(`${BASE_URL}/listings?status=active`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -89,7 +89,7 @@ export default function BoostListingPage() {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       
       // Get card element
       const cardElement = elements.getElement(CardElement);
@@ -454,9 +454,9 @@ export default function BoostListingPage() {
                   <div className="flex items-center gap-4">
                     <input
                       type="range"
-                      min="5"
+                      min="10"
                       max="100"
-                      step="5"
+                      step="10"
                       value={boostAmount}
                       onChange={(e) => setBoostAmount(Number(e.target.value))}
                       className="flex-1"
@@ -466,7 +466,7 @@ export default function BoostListingPage() {
                     </span>
                   </div>
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>Min: $5</span>
+                    <span>Min: $10</span>
                     <span>Max: $100</span>
                   </div>
                 </div>

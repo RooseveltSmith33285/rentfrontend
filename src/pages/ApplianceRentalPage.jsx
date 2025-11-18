@@ -1,15 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import React from 'react';
 import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import { BASE_URL } from '../baseUrl';
 import { useNavigate } from 'react-router-dom';
 import ComboPopup from '../components/combopopup';
+import {User} from 'lucide-react'
 
 
 export default function ApplianceRentalPage() {
   const [appliances, setAppliances] = useState([]);
   const [filteredAppliances, setFilteredAppliances] = useState([]);
+  const [hoveredListing, setHoveredListing] = useState(null);
+  const [open,setOpen]=useState(false)
   const [showComboPopup, setShowComboPopup] = useState(false);
   const [selectedComboAppliance, setSelectedComboAppliance] = useState(null);
   const [selectedPlugType, setSelectedPlugType] = useState('');
@@ -19,6 +22,8 @@ export default function ApplianceRentalPage() {
   const [selectedPriceRange, setSelectedPriceRange] = useState(null);
   const [showPriceDropdown, setShowPriceDropdown] = useState(false);
   const navigate = useNavigate();
+  const [user,setUser]=useState({})
+  const menuRef=useRef();
 
   const priceRanges = [
     { label: '$20-$60', min: 20, max: 60 },
@@ -166,11 +171,17 @@ export default function ApplianceRentalPage() {
 
   const getProducts = async () => {
     try {
-      let response = await axios.get(`${BASE_URL}/getUserListenings`);
+      let token=localStorage.getItem('token')
+      let response = await axios.get(`${BASE_URL}/getUserListenings`,{
+        headers:{
+          Authorization:`Bearer ${token}`
+        }
+      });
       const listenings = response.data.listenings || [];
       
       // 🚀 Sort by boost immediately when fetching
       const sortedListenings = sortByBoost(listenings);
+      setUser(response.data.user)
       setAppliances(sortedListenings);
     } catch (e) {
       if (e?.response?.data?.error) {
@@ -202,6 +213,7 @@ export default function ApplianceRentalPage() {
           Authorization: `Bearer ${token}`
         }
       });
+      console.log(response.data)
       setRequests(response.data.requests);
     } catch (e) {
       console.error('Error fetching user requests:', e);
@@ -229,6 +241,18 @@ export default function ApplianceRentalPage() {
       }
     }
   }
+  
+
+  // Get all rejection reasons for a specific listing
+// Get all rejection reasons for a specific listing
+const getRejectionReasons = (listingId) => {
+  return requests
+    .filter(req => req.listing === listingId && req.status === 'rejected')
+    .map(req => ({
+      reason: req.rejectionReason || 'No reason provided',
+      date: new Date(req.updatedAt).toLocaleDateString()
+    }));
+};
 
   // 🎨 NEW: Helper to check if boost is active
   const isBoostActive = (appliance) => {
@@ -266,11 +290,43 @@ export default function ApplianceRentalPage() {
         <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8">
           <div className="max-w-4xl mx-auto">
             {/* Greeting Header */}
-            <div className="mb-6">
-              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
-                Hi, Randall 👋
-              </h1>
-            </div>
+            <div className="mb-6 flex justify-between items-center">
+  <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
+    Hi, {user?.name?user?.name:"Renter"} 👋
+  </h1>
+
+  {/* Icon + Dropdown Wrapper */}
+  <div className="relative" ref={menuRef}>
+    
+    {/* Profile Icon */}
+    <div 
+      className="cursor-pointer"
+      onClick={() => setOpen(!open)}
+    >
+      <User className="w-8 h-8 text-gray-700" />
+    </div>
+
+    {/* Dropdown Menu */}
+    {open && (
+      <div className="absolute right-0 mt-2 w-40 bg-white shadow-lg rounded-md border p-2 z-50">
+        <div 
+          onClick={() => navigate("/renterdashboard")}
+          className="px-3 py-2 hover:bg-gray-100 rounded cursor-pointer"
+        >
+          Dashboard
+        </div>
+        <div 
+          onClick={() => navigate("/chat")}
+          className="px-3 py-2 hover:bg-gray-100 rounded cursor-pointer"
+        >
+          Chat
+        </div>
+      </div>
+    )}
+
+  </div>
+</div>
+
 
             {/* Filter Buttons */}
             <div className="flex flex-wrap gap-3 mb-6">
@@ -442,6 +498,43 @@ export default function ApplianceRentalPage() {
                         </div>
                       </div>
                     )}
+                    {/* Rejection Info Icon */}
+{getRejectionReasons(appliance._id).length > 0 && (
+  <div className="absolute top-3 left-3 z-10">
+    <div 
+      className="relative"
+      onMouseEnter={() => setHoveredListing(appliance._id)}
+      onMouseLeave={() => setHoveredListing(null)}
+    >
+      <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center cursor-help shadow-lg">
+        <span className="text-white font-bold text-sm">i</span>
+      </div>
+      
+      {/* Tooltip */}
+   {/* Tooltip */}
+{hoveredListing === appliance._id && (
+  <div className="absolute left-10 top-0 w-64 bg-gray-900 text-white text-sm rounded-lg p-3 shadow-xl z-20">
+    <div className="font-semibold mb-2">Previous Rejections ({getRejectionReasons(appliance._id).length}):</div>
+    <ul className="space-y-2">
+      {getRejectionReasons(appliance._id).map((item, index) => (
+        <li key={index} className="border-b border-gray-700 pb-2 last:border-0">
+          <div className="flex items-start">
+            <span className="mr-2">•</span>
+            <div>
+              <div>{item.reason}</div>
+              
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
+    {/* Arrow pointing left */}
+    <div className="absolute right-full top-3 w-0 h-0 border-t-4 border-t-transparent border-b-4 border-b-transparent border-r-4 border-r-gray-900"></div>
+  </div>
+)}
+    </div>
+  </div>
+)}
 
                     {/* Vendor Header */}
                     <div className="flex items-center mb-4">
@@ -552,7 +645,7 @@ export default function ApplianceRentalPage() {
                   
                     ):(
                       <>
-                   {requests?.find(u=>u.vendor==appliance.vendor._id)?<p>
+                   {requests?.find(u=>u.vendor==appliance.vendor._id && u?.status=="pending")?<p>
                     Waiting for vendor approval
                    </p>:<button
                         onClick={() => handleSelect(appliance)}

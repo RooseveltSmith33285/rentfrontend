@@ -848,7 +848,7 @@ function ListingCreationFlow() {
         const response = await axios.post(`${BASE_URL}/upload-image`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${localStorage.getItem('vendorToken')}`
           }
         });
 
@@ -869,7 +869,7 @@ function ListingCreationFlow() {
   // Check Stripe onboarding status
   const checkStripeStatus = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       
       const response = await axios.get(
         `${BASE_URL}/generateStripeOnboardingLink`,
@@ -954,8 +954,8 @@ function ListingCreationFlow() {
         toast.error('Please enter a description', { containerId: 'listingPage' });
         return false;
       }
-      if (formData.description.length < 50) {
-        toast.error('Description must be at least 50 characters', { containerId: 'listingPage' });
+      if (formData.description.length < 25) {
+        toast.error('Description must be at least 25 characters', { containerId: 'listingPage' });
         return false;
       }
     }
@@ -1012,7 +1012,7 @@ function ListingCreationFlow() {
         listingData,
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Authorization': `Bearer ${localStorage.getItem('vendorToken')}`,
             'Content-Type': 'application/json'
           }
         }
@@ -1332,7 +1332,7 @@ function ListingCreationFlow() {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Description * (Min 50 characters)
+                    Description * (Min 25 characters)
                   </label>
                   <textarea
                     name="description"
@@ -1347,37 +1347,7 @@ function ListingCreationFlow() {
                   </p>
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-blue-900 mb-2">
-                    Publishing Options
-                  </h3>
-                  <div className="space-y-2">
-                    <label className="flex items-center space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="listAsActive"
-                        checked={formData.listAsActive}
-                        onChange={handleInputChange}
-                        className="w-5 h-5 text-[#024a47] rounded"
-                      />
-                      <span className="text-sm text-gray-700">
-                        List immediately as Active
-                      </span>
-                    </label>
-                    <label className="flex items-center space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="publishToFeed"
-                        checked={formData.publishToFeed}
-                        onChange={handleInputChange}
-                        className="w-5 h-5 text-[#024a47] rounded"
-                      />
-                      <span className="text-sm text-gray-700">
-                        Post announcement to community feed
-                      </span>
-                    </label>
-                  </div>
-                </div>
+           
 
                 {/* Summary */}
                 <div className="bg-gray-50 rounded-lg p-4">

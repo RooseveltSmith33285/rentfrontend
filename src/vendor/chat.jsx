@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Send, Search, Home, MoreVertical, Check, CheckCheck } from "lucide-react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import axios from "axios";
 import { BASE_URL } from "../baseUrl";
 import { useContext } from "react";
@@ -152,7 +152,7 @@ function ChatPage() {
           // New conversation - fetch user info asynchronously
           axios.get(`${BASE_URL}/vendor/getUserInfo/${data.senderId}`, {
             headers: {
-              Authorization: `Bearer ${localStorage.getItem('token')}`
+              Authorization: `Bearer ${localStorage.getItem('vendorToken')}`
             }
           }).then(response => {
             setConversations(prev => {
@@ -308,13 +308,13 @@ function ChatPage() {
       if (userId) {
         let response = await axios.get(`${BASE_URL}/vendor/getUserInfo/${userId}`, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
+            Authorization: `Bearer ${localStorage.getItem('vendorToken')}`
           }
         });
 
         let conversationResponse = await axios.get(`${BASE_URL}/vendor/getConversation/${userId}`, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
+            Authorization: `Bearer ${localStorage.getItem('vendorToken')}`
           }
         });
         
@@ -365,7 +365,7 @@ useEffect(() => {
       try {
         await axios.get(`${BASE_URL}/vendor/seenMessages/${selectedConversation.user._id}`, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
+            Authorization: `Bearer ${localStorage.getItem('vendorToken')}`
           }
         });
         
@@ -411,7 +411,7 @@ if (socketRef?.socket && socketRef?.isConnected) {
       setLoading(true);
       const response = await axios.get(`${BASE_URL}/vendor/getConversations`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${localStorage.getItem('vendorToken')}`
         }
       });
 
@@ -477,7 +477,7 @@ if (socketRef?.socket && socketRef?.isConnected) {
     try {
       const response = await axios.get(`${BASE_URL}/vendor/getMessages/${userId}`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${localStorage.getItem('vendorToken')}`
         }
       });
       console.log("messages")
@@ -523,7 +523,7 @@ console.log(response.data)
         },
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
+            Authorization: `Bearer ${localStorage.getItem('vendorToken')}`
           }
         }
       );
@@ -671,10 +671,12 @@ if (socketRef?.socket && socketRef?.isConnected) {
               <button className="lg:hidden p-2 hover:bg-[#035d59] rounded-lg">
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              <button className="hidden lg:flex items-center space-x-2 hover:opacity-80">
+          <Link to='/vendordashboard'>
+          <button className="hidden lg:flex items-center space-x-2 hover:opacity-80">
                 <Home className="w-5 h-5" />
                 <span>Dashboard</span>
               </button>
+          </Link>
               <div className="h-8 w-px bg-white/30 hidden lg:block"></div>
               <h1 className="text-xl font-bold">Messages</h1>
             </div>

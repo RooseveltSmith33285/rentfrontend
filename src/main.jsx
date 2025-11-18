@@ -58,6 +58,7 @@ import UnitPurchasePage from './pages/renterconfirmationpage.jsx'
 import UserChatPage from './pages/chat.jsx'
 import SocketProvider from './context/socketContext.jsx'
 import VendorRequestsListPage from './vendor/vendorrequestlist.jsx'
+import RenterDashboard from './pages/renterdashboard.jsx'
 
 const stripePromise = loadStripe("pk_test_51OwuO4LcfLzcwwOYdssgGfUSfOgWT1LwO6ewi3CEPewY7WEL9ATqH6WJm3oAcLDA3IgUvVYLVEBMIEu0d8fUwhlw009JwzEYmV");
 
@@ -84,6 +85,7 @@ createRoot(document.getElementById('root')).render(
           <Route path="/confirm" element={<ConfirmSubmitPage />} />
           <Route path='/renterconfirmation' element={<UnitPurchasePage/>}/>
           <Route path="/dashboard" element={<RentSimpleAccount/>} />
+          <Route path='/renterDashboard' element={<RenterDashboard/>}/>
           <Route path="/reset-password" element={<Resetpassword/>} />
           <Route path="/confirmation" element={<OrderConfirmation/>} />
           <Route path="/contact" element={<ContactSupport/>} />

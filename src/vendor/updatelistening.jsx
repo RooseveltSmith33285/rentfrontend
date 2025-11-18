@@ -271,7 +271,7 @@ console.log(data)
 
       setSuccess('Listing updated successfully!');
       setTimeout(() => {
-        window.location.href = '/mylistenings';
+        window.location.href = '/vendordashboard';
       }, 1500);
 
     } catch (err) {
@@ -283,7 +283,7 @@ console.log(data)
   };
 
   const goBack = () => {
-    window.location.href = '/mylistenings';
+    window.location.href = '/vendordashboard';
   };
 
   const navigateTo = (path) => {
@@ -667,21 +667,7 @@ console.log(data)
           </div>
 
           {/* Publish to Feed */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <label className="flex items-center space-x-3 cursor-pointer">
-              <input
-                type="checkbox"
-                name="publishToFeed"
-                checked={formData.publishToFeed}
-                onChange={handleInputChange}
-                className="w-5 h-5 text-[#024a47] border-gray-300 rounded focus:ring-[#024a47]"
-              />
-              <div>
-                <span className="text-sm font-medium text-gray-900">Publish to Feed</span>
-                <p className="text-xs text-gray-500">Make this listing visible in the public feed</p>
-              </div>
-            </label>
-          </div>
+        
 
           {/* Submit Buttons */}
           <div className="flex flex-col sm:flex-row gap-4">

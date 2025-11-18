@@ -44,8 +44,17 @@ export default function App() {
       toast.success(response.data.message, {containerId:"resetPage"})
       
       
-      navigate('/?login=true'); 
-      
+      toast.success('✅ Password reset successfully! Redirecting to login...', {
+        containerId:"resetPage",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false
+      })
+      setTimeout(() => {
+        navigate('/?login=true'); 
+      }, 2500);
     } catch(e) {
       console.log(e)
       if (e?.response?.data?.error) {

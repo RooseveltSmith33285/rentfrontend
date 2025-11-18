@@ -69,7 +69,7 @@ function VendorFeed() {
     setError('');
     
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       
       if (!token) {
         setError('Please log in to view your listings');
@@ -143,7 +143,7 @@ function VendorFeed() {
     setShowDropdown(null);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       
       const response = await axios.delete(`${BASE_URL}/listings/${listingId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -172,7 +172,7 @@ function VendorFeed() {
 
   const handleToggleStatus = async (listingId) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       
       // Find the current listing to determine new status
       const currentListing = listings.find(l => l._id === listingId);

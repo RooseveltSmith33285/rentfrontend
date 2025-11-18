@@ -31,7 +31,7 @@ const [currentVendor, setCurrentVendor] = useState({});
 
   const fetchCurrentVendor = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       const response = await fetch(`${BASE_URL}/vendor/profile`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -49,7 +49,7 @@ const [currentVendor, setCurrentVendor] = useState({});
     setError('');
     
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       
       const response = await fetch(`${BASE_URL}/community/posts/${postId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -78,7 +78,7 @@ const [currentVendor, setCurrentVendor] = useState({});
 
   const handleLike = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       // Handle both populated and non-populated user objects
       const isLiked = post.likes?.some(like => {
         const likeUserId = typeof like.user === 'object' ? like.user._id : like.user;
@@ -128,7 +128,7 @@ const handleComment = async () => {
   if (!commentText.trim()) return;
 
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('vendorToken');
     
     const response = await fetch(`${BASE_URL}/community/posts/${postId}/comments`, {
       method: 'POST',
@@ -178,7 +178,7 @@ const handleComment = async () => {
     if (!window.confirm('Delete this comment?')) return;
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       
       const response = await fetch(`${BASE_URL}/community/posts/${postId}/comments/${commentId}`, {
         method: 'DELETE',
@@ -235,7 +235,7 @@ const handleComment = async () => {
     if (!window.confirm('Are you sure you want to delete this post?')) return;
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       
       const response = await fetch(`${BASE_URL}/community/posts/${postId}`, {
         method: 'DELETE',
