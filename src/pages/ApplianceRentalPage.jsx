@@ -11,6 +11,7 @@ import {User} from 'lucide-react'
 export default function ApplianceRentalPage() {
   const [appliances, setAppliances] = useState([]);
   const [filteredAppliances, setFilteredAppliances] = useState([]);
+  const [viewedListings, setViewedListings] = useState(new Set());
   const [hoveredListing, setHoveredListing] = useState(null);
   const [open,setOpen]=useState(false)
   const [showComboPopup, setShowComboPopup] = useState(false);
@@ -169,6 +170,11 @@ export default function ApplianceRentalPage() {
     setSelectedPlugType('');
   };
 
+
+  // Track when a user views a listing
+
+
+
   const getProducts = async () => {
     try {
       let token=localStorage.getItem('token')
@@ -194,6 +200,19 @@ export default function ApplianceRentalPage() {
     }
   };
 
+
+  const trackView = async (listingId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${BASE_URL}/trackView/${listingId}`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+    } catch (error) {
+      console.error('Error tracking view:', error);
+    }
+  };
   const getPrimaryImage = (images) => {
     if (!images || images.length === 0) return 'https://via.placeholder.com/200';
     const primary = images.find(img => img.isPrimary);
@@ -241,7 +260,10 @@ export default function ApplianceRentalPage() {
       }
     }
   }
-  
+
+
+  // Track views for all displayed appliances
+
 
   // Get all rejection reasons for a specific listing
 // Get all rejection reasons for a specific listing
@@ -272,6 +294,17 @@ const getRejectionReasons = (listingId) => {
   const displayAppliances = filteredAppliances.length > 0 || selectedCategory || selectedPriceRange 
     ? filteredAppliances 
     : appliances;
+
+
+    useEffect(() => {
+      displayAppliances.forEach(appliance => {
+        // Only track if not already viewed in this session
+        if (!viewedListings.has(appliance._id)) {
+          trackView(appliance._id);
+          setViewedListings(prev => new Set(prev).add(appliance._id));
+        }
+      });
+    }, [displayAppliances]);
 
   return (
     <>
@@ -316,7 +349,7 @@ const getRejectionReasons = (listingId) => {
           Dashboard
         </div>
         <div 
-          onClick={() => navigate("/chat")}
+          onClick={() => navigate("/userchat")}
           className="px-3 py-2 hover:bg-gray-100 rounded cursor-pointer"
         >
           Chat
@@ -480,10 +513,12 @@ const getRejectionReasons = (listingId) => {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6 mb-8">
-                {displayAppliances.map((appliance) => (
-                  <div 
+               
+                {displayAppliances.map((appliance) => {
+                 return <div 
+                 onClick={() => handleSelect(appliance)}
                     key={appliance._id} 
-                    className={`bg-white rounded-xl border p-4 shadow-sm hover:shadow-md transition-all flex flex-col h-full relative ${
+                    className={`bg-white cursor-pointer rounded-xl border p-4 shadow-sm hover:shadow-md transition-all flex flex-col h-full relative ${
                       isBoostActive(appliance) 
                         ? 'border-2 border-yellow-400 ring-2 ring-yellow-200' 
                         : 'border-gray-200'
@@ -538,15 +573,9 @@ const getRejectionReasons = (listingId) => {
 
                     {/* Vendor Header */}
                     <div className="flex items-center mb-4">
-                      <img 
-                        src={appliance?.vendor?.profileImage || "https://via.placeholder.com/40"} 
-                        alt={appliance?.vendor?.businessName || "Vendor"} 
-                        className="w-10 h-10 rounded-full mr-3"
-                      />
+                    
                       <div>
-                        <h4 className="text-sm font-semibold text-gray-900">
-                          {appliance?.vendor?.businessName || "Vendor"}
-                        </h4>
+                       
                       </div>
                     </div>
 
@@ -615,39 +644,97 @@ const getRejectionReasons = (listingId) => {
                     <div className="mt-auto space-y-3">
                       {/* Select Button */}
                     {requests?.find(u => u.vendor == appliance.vendor._id && u.approvedByVendor==true && u.status!="rejected")?(
-                    <div className="flex gap-4">
-                    {/* Accept Button */}
-                    <button
-                      onClick={() =>navigate(`/renterconfirmation?id=${requests?.find(u => u.vendor == appliance.vendor._id)?._id}`)}
-                      disabled={!appliance.availability?.isAvailable}
-                      className={`flex-1 py-3 px-6 rounded-lg font-semibold text-lg transition-colors ${
-                        !appliance.availability?.isAvailable
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-[#024a47] hover:bg-[#035d59] text-white'
-                      }`}
-                    >
-                      Accept Request
-                    </button>
-                  
-                    {/* Reject Button */}
-                    <button
-                      onClick={() => handleReject(appliance)}
-                      disabled={!appliance.availability?.isAvailable}
-                      className={`flex-1 py-3 px-6 rounded-lg font-semibold text-lg transition-colors ${
-                        !appliance.availability?.isAvailable
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-red-600 hover:bg-red-700 text-white'
-                      }`}
-                    >
-                      Reject Offer
-                    </button>
-                  </div>
-                  
+                   <div className="space-y-3">
+                   {/* Approval Badge */}
+                   <div className="flex items-center justify-center gap-2 bg-green-50 border-2 border-green-500 rounded-lg py-3 px-4">
+                     <div className="relative">
+                       {/* Animated ping effect */}
+                       <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75 animate-ping"></span>
+                       {/* Checkmark icon */}
+                       <div className="relative inline-flex items-center justify-center w-8 h-8 bg-green-500 rounded-full">
+                         <svg 
+                           className="w-5 h-5 text-white" 
+                           fill="none" 
+                           stroke="currentColor" 
+                           viewBox="0 0 24 24"
+                         >
+                           <path 
+                             strokeLinecap="round" 
+                             strokeLinejoin="round" 
+                             strokeWidth={3} 
+                             d="M5 13l4 4L19 7" 
+                           />
+                         </svg>
+                       </div>
+                     </div>
+                     <div className="flex-1">
+                       <p className="text-green-800 font-bold text-base">
+                         ✓ Vendor Approved Your Request!
+                       </p>
+                       <p className="text-green-700 text-sm">
+                         Review and accept to proceed with rental
+                       </p>
+                     </div>
+                   </div>
+               
+                   {/* Action Buttons */}
+                   <div className="flex gap-4">
+                     {/* Accept Button */}
+                     <button
+                       onClick={() => navigate(`/renterconfirmation?id=${requests?.find(u => u.vendor == appliance.vendor._id)?._id}`)}
+                       disabled={!appliance.availability?.isAvailable}
+                       className={`flex-1 py-3 px-6 rounded-lg font-semibold text-lg transition-colors ${
+                         !appliance.availability?.isAvailable
+                           ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                           : 'bg-[#024a47] hover:bg-[#035d59] text-white'
+                       }`}
+                     >
+                       Accept Request
+                     </button>
+                   
+                     {/* Reject Button */}
+                     <button
+                       onClick={() => handleReject(appliance)}
+                       disabled={!appliance.availability?.isAvailable}
+                       className={`flex-1 py-3 px-6 rounded-lg font-semibold text-lg transition-colors ${
+                         !appliance.availability?.isAvailable
+                           ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                           : 'bg-red-600 hover:bg-red-700 text-white'
+                       }`}
+                     >
+                       Reject Offer
+                     </button>
+                   </div>
+                 </div>
                     ):(
                       <>
-                   {requests?.find(u=>u.vendor==appliance.vendor._id && u?.status=="pending")?<p>
-                    Waiting for vendor approval
-                   </p>:<button
+                   {requests?.find(u=>u.vendor==appliance.vendor._id && u?.status=="pending")?<div className="w-full py-3 px-6 rounded-lg border-2 border-amber-400 bg-amber-50 flex items-center justify-center gap-3"> 
+
+                    <svg 
+      className="w-5 h-5 text-amber-600 animate-spin" 
+      xmlns="http://www.w3.org/2000/svg" 
+      fill="none" 
+      viewBox="0 0 24 24"
+    >
+      <circle 
+        className="opacity-25" 
+        cx="12" 
+        cy="12" 
+        r="10" 
+        stroke="currentColor" 
+        strokeWidth="4"
+      />
+      <path 
+        className="opacity-75" 
+        fill="currentColor" 
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+      />
+    </svg>
+                    <p className="text-amber-700 font-semibold text-base">
+      Awaiting Vendor Approval
+    </p>
+
+                   </div>:<button
                         onClick={() => handleSelect(appliance)}
                         disabled={!appliance.availability?.isAvailable}
                         className={`w-full py-3 px-6 rounded-lg font-semibold text-lg transition-colors ${
@@ -672,7 +759,7 @@ const getRejectionReasons = (listingId) => {
                         </button>
                     </div>
                   </div>
-                ))}
+                })}
               </div>
             )}
           </div>

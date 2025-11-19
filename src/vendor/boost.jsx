@@ -2,10 +2,15 @@ import { useState, useEffect } from 'react';
 import React from 'react'
 import { BASE_URL } from '../baseUrl';
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { Link } from 'react-router-dom';
+import { Home } from 'lucide-react';
+import { useContext } from 'react';
+import { SocketContext } from '../context/socketContext';
 
 export default function BoostListingPage() {
   const stripe = useStripe();
   const elements = useElements();
+  const [activeRenters, setActiveRenters] = useState(0);
   const [listings, setListings] = useState([]);
   const [selectedListing, setSelectedListing] = useState(null);
   const [boostAmount, setBoostAmount] = useState(5);
@@ -21,7 +26,19 @@ export default function BoostListingPage() {
     shares: 0
   });
 
+  const socketRef = useContext(SocketContext);
+
+
   // Mock data - replace with API call
+  function getActiveRentersCount() {
+    let count = 0;
+    for (let [userId, userData] of onlineUsers.entries()) {
+      if (userData.userType === 'user') {
+        count++;
+      }
+    }
+    return count;
+  }
 
   useEffect(() => {
     const fetchListings = async () => {
@@ -60,6 +77,55 @@ export default function BoostListingPage() {
     fetchListings();
   }, []);
  
+
+  useEffect(() => {
+    if (!socketRef?.socket) return;
+  
+    const socket = socketRef.socket;
+  
+    // Join as vendor to receive user online/offline events
+    const vendorId = localStorage.getItem('vendorId');
+    if (vendorId) {
+      console.log('Joining as vendor:', vendorId);
+      socket.emit('join', {
+        userId: vendorId,
+        userType: 'vendor'
+      });
+    }
+  
+    // Listen for initial active renters count (you'll need to add this event in backend)
+    socket.on('activeRentersCount', (count) => {
+      setActiveRenters(count);
+      console.log('Active renters:', count);
+    });
+  
+    // Listen for user coming online
+    socket.on('userOnline', (data) => {
+      if (data.userType === 'user') {
+        setActiveRenters(prev => prev + 1);
+        console.log('Renter came online:', data.userId);
+      }
+    });
+  
+    // Listen for user going offline
+    socket.on('userOffline', (data) => {
+      if (data.userType === 'user') {
+        setActiveRenters(prev => Math.max(0, prev - 1));
+        console.log('Renter went offline:', data.userId);
+      }
+    });
+  
+    // Request initial count when component mounts
+    socket.emit('getActiveRenters');
+  
+    // Cleanup listeners on unmount
+    return () => {
+      socket.off('activeRentersCount');
+      socket.off('userOnline');
+      socket.off('userOffline');
+    };
+  }, [socketRef?.socket]);
+
   // Simulate real-time stats updates
   useEffect(() => {
     if (selectedListing) {
@@ -114,7 +180,8 @@ export default function BoostListingPage() {
           listingId: selectedListing._id,
           amount: boostAmount,
           duration: boostDuration,
-          paymentMethodId: paymentMethod.id
+          paymentMethodId: paymentMethod.id,
+          estimatedReach: boostAmount * 70
         })
       });
       const data = await response.json();
@@ -168,11 +235,17 @@ export default function BoostListingPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <Link to='/vendordashboard'>
+          <button className="hidden lg:flex items-center space-x-2 hover:opacity-80">
+                <Home className="w-5 h-5" />
+                <span>Dashboard</span>
+              </button>
+          </Link>
           <h1 className="text-3xl md:text-4xl font-bold text-[#024a47] mb-2">
             Boost Your Listings
           </h1>
           <p className="text-gray-600">
-            Increase visibility and reach more customers with micro-payment boosts
+            Increase visibility and reach more customers with boosts
           </p>
         </div>
 
@@ -228,20 +301,27 @@ export default function BoostListingPage() {
           </div>
 
           <div className="bg-white rounded-lg shadow p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">Avg. Score</p>
-                <p className="text-2xl font-bold text-[#024a47]">
-                  {Math.round(listings.reduce((sum, l) => sum + l.visibility.visibilityScore, 0) / listings.length)}
-                </p>
-              </div>
-              <div className="bg-[#024a47] bg-opacity-10 rounded-full p-3">
-                <svg className="w-6 h-6 text-[#024a47]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-            </div>
-          </div>
+  <div className="flex items-center justify-between">
+    <div>
+      <div className="flex items-center gap-2 mb-1">
+        <p className="text-gray-500 text-sm">Active Renters Online</p>
+        <span className="relative flex h-3 w-3">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+        </span>
+      </div>
+      <p className="text-2xl font-bold text-[#024a47]">
+        {activeRenters}
+      </p>
+      <p className="text-xs text-gray-500 mt-1">Real-time count</p>
+    </div>
+    <div className="bg-[#024a47] bg-opacity-10 rounded-full p-3">
+      <svg className="w-6 h-6 text-[#024a47]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    </div>
+  </div>
+</div>
         </div>
 
         {/* Tabs */}
@@ -290,9 +370,7 @@ export default function BoostListingPage() {
                           BOOSTED
                         </div>
                       )}
-                      <div className="absolute bottom-2 left-2 bg-white bg-opacity-90 px-2 py-1 rounded text-xs font-semibold text-[#024a47]">
-                        Score: {listing.visibility.visibilityScore}
-                      </div>
+                      
                     </div>
 
                     <div className="p-4">
@@ -525,8 +603,22 @@ export default function BoostListingPage() {
 
                 <div className="bg-gradient-to-r from-[#024a47] to-[#035d59] text-white rounded-lg p-6">
                   <h4 className="font-bold mb-4">Estimated Results</h4>
-
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm opacity-90 mb-1">Boost Spend</p>
+                      <p className="text-2xl font-bold">${boostAmount}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm opacity-90 mb-1">Est. Reach</p>
+                      <p className="text-2xl font-bold">{(boostAmount * 70).toLocaleString()} people</p>
+                    </div>
                   </div>
+                  <div className="mt-4 pt-4 border-t border-white border-opacity-20">
+                    <p className="text-xs opacity-75">
+                      Based on {boostDuration} days boost duration
+                    </p>
+                  </div>
+                </div>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <div className="flex gap-3">

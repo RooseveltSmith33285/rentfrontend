@@ -521,7 +521,7 @@ console.log(data)
           </div>
 
           {/* Specifications */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          {/* <div className="bg-white rounded-lg shadow-sm p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Specifications</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -585,7 +585,7 @@ console.log(data)
                 />
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Images */}
           <div className="bg-white rounded-lg shadow-sm p-6">

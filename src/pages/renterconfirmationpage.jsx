@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios'
 import { BASE_URL } from '../baseUrl';
 import { useStripe, useElements, CardNumberElement, CardExpiryElement, CardCvcElement } from '@stripe/react-stripe-js';
@@ -20,6 +20,7 @@ export default function UnitPurchasePage() {
   const [orderConfirmed, setOrderConfirmed] = useState(false);
   const [confirmationNumber, setConfirmationNumber] = useState('');
   const [credits,setCredits]=useState(0)
+  const [downloadingReceipt, setDownloadingReceipt] = useState(false);
 
   useEffect(() => {
     const id = searchParams.get('id');
@@ -101,12 +102,11 @@ export default function UnitPurchasePage() {
       const response = await axios.post(`${BASE_URL}/approveOfferByUser`, 
         { 
           id, 
-          totalPrice: finalTotal, // Send final amount after credits
-          creditsUsed: creditsApplied, // Send credits used
-          totalBeforeCredits: totalBeforeCredits, // Send original total
+          totalPrice: finalTotal,
+          creditsUsed: creditsApplied,
+          totalBeforeCredits: totalBeforeCredits,
           paymentMethodId: paymentMethod.id,
-          totalBeforeCredits: totalBeforeCredits, // Send original total
-    newCredits: newCredits,
+          newCredits: newCredits,
           deliveryType: request.deliveryType || 'standard',
           installationType: request.installationType || 'professional',
           deliveryAddress: {
@@ -119,7 +119,8 @@ export default function UnitPurchasePage() {
           deliveryDate: new Date().toISOString(),
           deliveryTime: 'TBD',
           monthlyRent: request.listing?.pricing?.rentPrice,
-          deliveryFee: 60,
+          deliveryFee: getDeliveryFee(), // ✅ Dynamic delivery fee
+          installationFee: getInstallationFee(), // ✅ Dynamic installation fee
           serviceFee: 12
         },
         {
@@ -149,9 +150,7 @@ export default function UnitPurchasePage() {
         alert('✅ Payment successful! Your order has been confirmed.');
         
         setOrderConfirmed(true);
-        setTimeout(()=>{
-          navigate('/appliance')
-        }, 2000)
+      
       }
     } catch (e) {
       console.error('Error:', e);
@@ -162,6 +161,80 @@ export default function UnitPurchasePage() {
   };
 
   
+  const downloadReceipt = () => {
+    setDownloadingReceipt(true);
+  
+    try {
+      const receiptContent = `
+  RECEIPT
+  ${'-'.repeat(50)}
+  
+  Order Number: ${confirmationNumber}
+  Date: ${new Date().toLocaleString()}
+  
+  ${'-'.repeat(50)}
+  PRODUCT DETAILS
+  ${'-'.repeat(50)}
+  
+  Item: ${request.listing?.title}
+  Brand: ${request.listing?.brand}
+  Monthly Rent: $${request.listing?.pricing?.rentPrice}
+  
+  ${'-'.repeat(50)}
+  CHARGES
+  ${'-'.repeat(50)}
+  
+  First Month Rent          $${request.listing?.pricing?.rentPrice}
+  ${request?.deliveryType !== 'pickup' ? `Delivery Fee              $${getDeliveryFee()}` : 'Delivery Fee              $0.00 (Self Pickup)'}
+  ${request?.installationType !== 'no-install' ? `Installation Fee          $${getInstallationFee()}` : 'Installation Fee          $0.00 (Self Installation)'}
+  Service Fee               $12.00
+  
+  ${getCreditsApplied() > 0 ? `
+  Subtotal                  $${getTotalBeforeCredits().toFixed(2)}
+  Credits Applied          -$${getCreditsApplied().toFixed(2)}
+  ` : ''}
+  ${'-'.repeat(50)}
+  TOTAL PAID                $${calculateTotal().toFixed(2)}
+  ${'-'.repeat(50)}
+  
+  ${getCreditsApplied() > 0 ? `
+  Credits Used: $${getCreditsApplied().toFixed(2)}
+  Remaining Credits: $${(credits - getCreditsApplied()).toFixed(2)}
+  
+  ` : ''}
+  DELIVERY INFORMATION
+  ${'-'.repeat(50)}
+  
+  Delivery Type: ${request?.deliveryType || 'Standard'}
+  Installation Type: ${request?.installationType || 'Professional'}
+  
+  ${'-'.repeat(50)}
+  
+  Thank you for your order!
+  For support, contact: support@rentsimple.com
+  
+  ${'-'.repeat(50)}
+      `.trim();
+  
+      // Create and download file
+      const blob = new Blob([receiptContent], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `receipt-${confirmationNumber}-${new Date().toISOString().split('T')[0]}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+  
+      setDownloadingReceipt(false);
+    } catch (error) {
+      console.error('Error downloading receipt:', error);
+      alert('Failed to download receipt');
+      setDownloadingReceipt(false);
+    }
+  };
+
   const handleDeny = async () => {
     // Add your deny logic here
     if (window.confirm('Are you sure you want to deny this offer?')) {
@@ -210,25 +283,44 @@ export default function UnitPurchasePage() {
     return primary ? primary.url : images[0].url;
   };
 
+
+  const getDeliveryFee = () => {
+    if (request?.deliveryType === 'pickup') {
+      return 0;
+    }
+    return 30; // delivery = $30
+  };
+  
+  const getInstallationFee = () => {
+    if (request?.installationType === 'no-install') {
+      return 0;
+    }
+    return 30; // installation = $30
+  };
+  
   // Calculate total with service fee
 // Calculate total with service fee and apply credits
 const calculateTotal = () => {
   const rentPrice = request?.listing?.pricing?.rentPrice || 60;
-  const deliveryFee = 60;
-  const subtotal = rentPrice + deliveryFee;
+  const deliveryFee = getDeliveryFee();
+  const installationFee = getInstallationFee();
+  const subtotal = rentPrice + deliveryFee + installationFee;
   const serviceFee = 12;
   const totalBeforeCredits = subtotal + serviceFee;
   
-  // Apply credits (cannot go below 0)
-  const finalTotal = Math.max(0, totalBeforeCredits - credits);
+  // Apply credits (minimum $1 if credits are used)
+  const afterCredits = totalBeforeCredits - credits;
+  const finalTotal = credits > 0 && afterCredits < 1 ? 1 : Math.max(0, afterCredits);
   return finalTotal;
 };
+
 
 // Helper to get amount before credits
 const getTotalBeforeCredits = () => {
   const rentPrice = request?.listing?.pricing?.rentPrice || 60;
-  const deliveryFee = 60;
-  const subtotal = rentPrice + deliveryFee;
+  const deliveryFee = getDeliveryFee();
+  const installationFee = getInstallationFee();
+  const subtotal = rentPrice + deliveryFee + installationFee;
   const serviceFee = 12;
   return subtotal + serviceFee;
 };
@@ -236,9 +328,12 @@ const getTotalBeforeCredits = () => {
 // Helper to get credits applied
 const getCreditsApplied = () => {
   const totalBefore = getTotalBeforeCredits();
-  return Math.min(credits, totalBefore);
+  // If credits would bring total below $1, only apply credits to leave $1 remaining
+  if (credits >= totalBefore) {
+    return totalBefore - 1;
+  }
+  return credits;
 };
-
 
   // Show Payment Screen
  // Show Payment Screen
@@ -254,6 +349,11 @@ const getCreditsApplied = () => {
       },
     },
   };
+
+
+
+  
+
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6 relative">
@@ -338,16 +438,38 @@ const getCreditsApplied = () => {
     <span>First month rent</span>
     <span>${request.listing?.pricing?.rentPrice}</span>
   </div>
-  <div className="flex justify-between text-xl text-gray-900">
-    <span>Installation & delivery</span>
-    <span>$60</span>
-  </div>
+  
+  {/* Show delivery fee only if not pickup */}
+  {request?.deliveryType !== 'pickup' && (
+    <div className="flex justify-between text-xl text-gray-900">
+      <span>Delivery</span>
+      <span>${getDeliveryFee()}</span>
+    </div>
+  )}
+  
+  {/* Show installation fee only if not no-install */}
+  {request?.installationType !== 'no-install' && (
+    <div className="flex justify-between text-xl text-gray-900">
+      <span>Installation</span>
+      <span>${getInstallationFee()}</span>
+    </div>
+  )}
+  
+  {/* Show message if both are free */}
+  {request?.deliveryType === 'pickup' && request?.installationType === 'no-install' && (
+    <div className="flex items-center gap-2 text-green-700 bg-green-50 -mx-4 px-4 py-2 rounded-lg">
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span className="font-semibold">Self pickup & installation - No extra fees!</span>
+    </div>
+  )}
+  
   <div className="flex justify-between text-lg text-gray-600">
     <span>Service fee</span>
     <span>$12</span>
   </div>
 </div>
-
 {/* Credits Used Section - ADD THIS */}
 {getCreditsApplied() > 0 && (
   <div className="border-t border-gray-200 pt-4 mb-4">
@@ -479,21 +601,43 @@ if (orderConfirmed) {
 
           {/* Cost Breakdown */}
       {/* Cost Breakdown */}
-<div className="space-y-4 mb-6">
+      <div className="space-y-4 mb-6">
   <div className="flex justify-between text-xl text-gray-900">
     <span>First month rent</span>
     <span>${request.listing?.pricing?.rentPrice}</span>
   </div>
-  <div className="flex justify-between text-xl text-gray-900">
-    <span>Installation & delivery</span>
-    <span>$60</span>
-  </div>
+  
+  {/* Show delivery fee only if not pickup */}
+  {request?.deliveryType !== 'pickup' && (
+    <div className="flex justify-between text-xl text-gray-900">
+      <span>Delivery</span>
+      <span>${getDeliveryFee()}</span>
+    </div>
+  )}
+  
+  {/* Show installation fee only if not no-install */}
+  {request?.installationType !== 'no-install' && (
+    <div className="flex justify-between text-xl text-gray-900">
+      <span>Installation</span>
+      <span>${getInstallationFee()}</span>
+    </div>
+  )}
+  
+  {/* Show message if both are free */}
+  {request?.deliveryType === 'pickup' && request?.installationType === 'no-install' && (
+    <div className="flex items-center gap-2 text-green-700 bg-green-50 -mx-4 px-4 py-2 rounded-lg">
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span className="font-semibold">Self pickup & installation - No extra fees!</span>
+    </div>
+  )}
+  
   <div className="flex justify-between text-lg text-gray-600">
     <span>Service fee</span>
     <span>$12</span>
   </div>
 </div>
-
 {/* Credits Used Section - ADD THIS */}
 {getCreditsApplied() > 0 && (
   <div className="border-t border-gray-200 pt-4 mb-4">
@@ -521,9 +665,42 @@ if (orderConfirmed) {
 
           {/* Success Message */}
           <div className="text-center">
-            <p className="text-2xl font-bold text-gray-900 mb-2">Your order is on the way!</p>
-            <p className="text-gray-600 text-lg">We'll let you know when it's out for delivery.</p>
-          </div>
+  <p className="text-2xl font-bold text-gray-900 mb-2">Your order is on the way!</p>
+  <p className="text-gray-600 text-lg mb-6">We'll let you know when it's out for delivery.</p>
+  
+  {/* Download Receipt Button */}
+  <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
+    <button
+      onClick={downloadReceipt}
+      disabled={downloadingReceipt}
+      className="inline-flex items-center space-x-2 bg-[#004d40] hover:bg-[#00635a] text-white font-semibold py-3 px-6 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      {downloadingReceipt ? (
+        <>
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+          <span>Downloading...</span>
+        </>
+      ) : (
+        <>
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          <span>Download Receipt</span>
+        </>
+      )}
+    </button>
+
+    <Link
+      to="/renterdashboard"
+      className="inline-flex items-center space-x-2 bg-white hover:bg-gray-50 text-[#004d40] font-semibold py-3 px-6 rounded-xl border-2 border-[#004d40] transition-colors"
+    >
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+      <span>Go to Dashboard</span>
+    </Link>
+  </div>
+</div>
         </div>
       </div>
     </div>
@@ -543,11 +720,7 @@ if (orderConfirmed) {
             </div>
             <h1 className="text-2xl font-bold text-gray-900">RentSimple</h1>
           </div>
-          <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-            <svg className="w-6 h-6 text-[#004d40]" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-            </svg>
-          </div>
+         
         </div>
       </div>
 

@@ -56,6 +56,7 @@ const containsContactInfo = (text) => {
 
 function ChatPage() {
   const messagesEndRef = useRef(null);
+  const optionsMenuRef = useRef(null);
   const location = useLocation();
   const socketRef = useContext(SocketContext);
 
@@ -68,6 +69,8 @@ function ChatPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const [downloadingConversation, setDownloadingConversation] = useState(false);
 
   // Fetch conversations on mount
   useEffect(() => {
@@ -650,6 +653,63 @@ if (socketRef?.socket && socketRef?.isConnected) {
     }
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (optionsMenuRef.current && !optionsMenuRef.current.contains(event.target)) {
+        setShowOptionsMenu(false);
+      }
+    };
+  
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const downloadConversation = async () => {
+    if (!selectedConversation || messages.length === 0) {
+      alert('No messages to download');
+      return;
+    }
+  
+    setDownloadingConversation(true);
+    setShowOptionsMenu(false);
+  
+    try {
+      // Format messages for download
+      const conversationText = messages.map(msg => {
+        const time = formatTime(msg.timestamp);
+        const sender = msg.sentBy === 'vendor' ? 'You' : (selectedConversation.user.name || 'User');
+        const messageText = msg.message || msg.text || '[No message content]';
+        return `[${time}] ${sender}: ${messageText}`;
+      }).join('\n\n');
+  
+      const userName = selectedConversation.user.name || 'User';
+      const header = `Conversation with ${userName}\n` +
+                     `Downloaded on: ${new Date().toLocaleString()}\n` +
+                     `Total Messages: ${messages.length}\n` +
+                     `${'='.repeat(60)}\n\n`;
+  
+      const fullContent = header + conversationText;
+  
+      // Create and download file
+      const blob = new Blob([fullContent], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const sanitizedUserName = userName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+      link.download = `conversation-${sanitizedUserName}-${new Date().toISOString().split('T')[0]}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+  
+      setDownloadingConversation(false);
+    } catch (error) {
+      console.error('Error downloading conversation:', error);
+      alert('Failed to download conversation');
+      setDownloadingConversation(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-50">
@@ -773,9 +833,51 @@ if (socketRef?.socket && socketRef?.isConnected) {
                     <p className="text-xs text-gray-500 capitalize">User</p>
                   </div>
                 </div>
-                <button className="p-2 hover:bg-gray-100 rounded-lg">
-                  <MoreVertical className="w-5 h-5 text-gray-600" />
-                </button>
+                <div className="relative" ref={optionsMenuRef}>
+  <button 
+    onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+    className="p-2 hover:bg-gray-100 rounded-lg"
+  >
+    <MoreVertical className="w-5 h-5 text-gray-600" />
+  </button>
+
+  {showOptionsMenu && (
+    <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+      <button
+        onClick={downloadConversation}
+        disabled={downloadingConversation}
+        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {downloadingConversation ? (
+          <>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#024a47]"></div>
+            <span>Downloading...</span>
+          </>
+        ) : (
+          <>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span>Download Conversation</span>
+          </>
+        )}
+      </button>
+      
+      <button
+        onClick={() => {
+          setShowOptionsMenu(false);
+          alert('Conversation reported sucessfully');
+        }}
+        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <span>Report Conversation</span>
+      </button>
+    </div>
+  )}
+</div>
               </div>
 
               {/* Messages */}

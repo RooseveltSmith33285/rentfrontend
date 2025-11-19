@@ -1269,57 +1269,61 @@ function ListingCreationFlow() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Upload Images * (Max 5 images, 10MB each)
-                  </label>
-                  <input
-                    type="file"
-                    id="image-upload"
-                    multiple
-                    accept="image/png,image/jpeg,image/jpg"
-                    onChange={handleImageChange}
-                    className="hidden"
-                  />
-                  <label
-                    htmlFor="image-upload"
-                    className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-[#024a47] transition-colors cursor-pointer block"
-                  >
-                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-600 mb-2">
-                      Click to upload or drag and drop
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      PNG, JPG up to 10MB (max 5 images)
-                    </p>
-                  </label>
+  <label className="block text-sm font-semibold text-gray-700 mb-2">
+    Upload Images * (Max 5 images, 10MB each)
+  </label>
+  <input
+    type="file"
+    id="image-upload"
+    multiple
+    accept="image/png,image/jpeg,image/jpg"
+    onChange={handleImageChange}
+    onClick={(e) => {
+      // Reset the input value so the same file can be selected again
+      e.target.value = null;
+    }}
+    className="hidden"
+  />
+  <label
+    htmlFor="image-upload"
+    className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-[#024a47] transition-colors cursor-pointer block"
+  >
+    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+    <p className="text-gray-600 mb-2">
+      Click to upload or drag and drop
+    </p>
+    <p className="text-sm text-gray-500">
+      PNG, JPG up to 10MB (max 5 images)
+    </p>
+  </label>
 
-                  {/* Image Previews */}
-                  {imagePreviews.length > 0 && (
-                    <div className="grid grid-cols-5 gap-3 mt-4">
-                      {imagePreviews.map((preview, index) => (
-                        <div key={index} className="relative group">
-                          <img
-                            src={preview}
-                            alt={`Preview ${index + 1}`}
-                            className="w-full h-24 object-cover rounded-lg"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeImage(index)}
-                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                          {index === 0 && (
-                            <span className="absolute bottom-1 left-1 bg-green-500 text-white text-xs px-2 py-1 rounded">
-                              Primary
-                            </span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+  {/* Image Previews */}
+  {imagePreviews.length > 0 && (
+    <div className="grid grid-cols-5 gap-3 mt-4">
+      {imagePreviews.map((preview, index) => (
+        <div key={index} className="relative group">
+          <img
+            src={preview}
+            alt={`Preview ${index + 1}`}
+            className="w-full h-24 object-cover rounded-lg"
+          />
+          <button
+            type="button"
+            onClick={() => removeImage(index)}
+            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          {index === 0 && (
+            <span className="absolute bottom-1 left-1 bg-green-500 text-white text-xs px-2 py-1 rounded">
+              Primary
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  )}
+</div>
               </div>
             )}
 

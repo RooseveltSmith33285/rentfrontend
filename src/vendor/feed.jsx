@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Heart, MessageCircle, Share2, Users, TrendingUp, Megaphone, Lightbulb, Tag, Search, X, Send, MoreVertical, Edit, Trash2, AlertCircle } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Users, TrendingUp, Megaphone, Lightbulb, Tag, Search, X, Send, MoreVertical, Edit, Trash2, AlertCircle, Home } from 'lucide-react';
 import { BASE_URL } from '../baseUrl';
+import { Link } from 'react-router-dom';
 
 function VendorCommunityFeed() {
   const [posts, setPosts] = useState([]);
@@ -50,12 +51,13 @@ function VendorCommunityFeed() {
 
   const fetchCurrentVendor = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       const response = await fetch(`${BASE_URL}/vendor/profile`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
       console.log("CURRENT PROFILE")
+      console.log(data)
       setCurrentVendorId(data.vendor._id);
       setCurrentVendor(data.vendor)
     } catch (err) {
@@ -70,7 +72,7 @@ function VendorCommunityFeed() {
     setError('');
     
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       
       const params = new URLSearchParams({
         page,
@@ -78,7 +80,7 @@ function VendorCommunityFeed() {
       });
       
       if (selectedType !== 'all') {
-        params.append('type', selectedType);
+        params.append('filter', selectedType);
       }
 
       const response = await fetch(`${BASE_URL}/posts?${params}`, {
@@ -124,7 +126,7 @@ console.log(data)
   const handleLike = async (postId) => {
     try {
        
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       const post = posts.find(p => p._id === postId);
       
       // Check if already liked
@@ -175,7 +177,7 @@ console.log(data)
     setLoadingComments(prev => ({ ...prev, [postId]: true }));
     
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       
       const response = await fetch(`${BASE_URL}/community/posts/${postId}/comments`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -199,7 +201,7 @@ console.log(data)
     if (!text) return;
   
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       
       const response = await fetch(`${BASE_URL}/community/posts/${postId}/comments`, {
         method: 'POST',
@@ -253,7 +255,7 @@ console.log(data)
     if (!window.confirm('Delete this comment?')) return;
   
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       
       const response = await fetch(`${BASE_URL}/community/posts/${postId}/comments/${commentId}`, {
         method: 'DELETE',
@@ -313,7 +315,7 @@ console.log(data)
     if (!window.confirm('Are you sure you want to delete this post?')) return;
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       
       await fetch(`${BASE_URL}/community/posts/${postId}`, {
         method: 'DELETE',
@@ -372,6 +374,12 @@ console.log(data)
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between mb-4">
             <div>
+            <Link to='/vendordashboard'>
+          <button className="hidden lg:flex items-center space-x-2 hover:opacity-80">
+                <Home className="w-5 h-5" />
+                <span>Dashboard</span>
+              </button>
+          </Link>
               <h1 className="text-2xl font-bold text-[#024a47] flex items-center gap-2">
                 <Users className="w-7 h-7" />
                 Community Feed

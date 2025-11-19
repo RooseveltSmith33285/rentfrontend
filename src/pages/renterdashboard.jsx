@@ -284,18 +284,18 @@ const stats = [
 
   const RejectDeliveryModal = () => {
     const rejectReasons = [
-      'Unit Not Delivered',
-      'Incorrect Unit Delivered',
-      'Unit Damaged During Delivery',
-      'Installation Not Completed',
-      'Installation Done Incorrectly',
-      'Unit Not Working Properly',
-      'Safety Concerns with Installation',
-      'Delivery Time Not Honored',
-      'Missing Parts or Accessories',
-      'Poor Condition Upon Arrival',
-      'Unit Does Not Match Description',
-      'Professional Installation Required but Not Provided'
+      'Budget Limitations',
+      'Scheduling Conflict',
+      'Unit Not a Good Fit',
+      'Condition Concerns',
+      'Change in Plans',
+      'Found a Better Alternative',
+      'Size Doesn\'t Match My Space',
+      'Features Don\'t Meet My Needs',
+      'Prefer Different Brand/Model',
+      'No Longer Need the Appliance',
+      'Delivery Window Doesn\'t Work',
+      'Installation Requirements Not Clear'
     ];
 
     return (
@@ -303,7 +303,7 @@ const stats = [
         <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-gray-900">Reject Delivery & Installation</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Cancel Rental Request</h2>
               <button 
                 onClick={() => {
                   setShowRejectModal(false);
@@ -319,22 +319,22 @@ const stats = [
               </button>
             </div>
 
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+            <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
               <div className="flex">
                 <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm text-yellow-700">
-                    Please select a reason for rejecting this delivery and installation. This action cannot be undone.
+                  <p className="text-sm text-blue-700">
+                    We understand plans change. Please let us know why you'd like to cancel this rental request.
                   </p>
                 </div>
               </div>
             </div>
 
-            <p className="text-gray-600 mb-4 font-semibold">Please select a reason for rejection:</p>
+            <p className="text-gray-600 mb-4 font-semibold">Please select a reason for cancellation:</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6 max-h-96 overflow-y-auto pr-2">
               {rejectReasons.map((reason) => (
@@ -342,7 +342,7 @@ const stats = [
                   key={reason}
                   className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${
                     rejectReason === reason
-                      ? 'border-red-600 bg-red-50'
+                      ? 'border-blue-600 bg-blue-50'
                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                   } ${processingReject ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
@@ -353,7 +353,7 @@ const stats = [
                     checked={rejectReason === reason}
                     onChange={(e) => setRejectReason(e.target.value)}
                     disabled={processingReject}
-                    className="mt-1 mr-3 text-red-600 focus:ring-red-500"
+                    className="mt-1 mr-3 text-blue-600 focus:ring-blue-500"
                   />
                   <span className="text-sm text-gray-900 font-medium">{reason}</span>
                 </label>
@@ -370,12 +370,12 @@ const stats = [
                 disabled={processingReject}
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Cancel
+                Keep Request
               </button>
               <button
                 onClick={confirmRejectDelivery}
                 disabled={!rejectReason || processingReject}
-                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 {processingReject ? (
                   <>
@@ -383,7 +383,7 @@ const stats = [
                     Processing...
                   </>
                 ) : (
-                  'Confirm Rejection'
+                  'Confirm Cancellation'
                 )}
               </button>
             </div>
@@ -458,7 +458,7 @@ const stats = [
        
 
           <button
-            onClick={() => handleNavigation('/chat')}
+            onClick={() => handleNavigation('/userchat')}
             className="bg-white hover:bg-gray-50 text-[#024a47] border-2 border-[#024a47] rounded-lg p-6 flex items-center space-x-4 transition-all shadow-md relative"
           >
             <MessageCircle className="w-8 h-8" />

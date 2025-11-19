@@ -106,27 +106,27 @@ const ComboPopup = ({ selectedComboAppliance, handlePlugTypeSelect }) => {
 
           {/* Installation Options */}
           <div className="grid grid-cols-2 gap-4 mb-8">
-            <button
-              onClick={() => setSelectedInstallOption('no-install')}
-              className={`py-4 px-6 rounded-lg font-semibold text-lg transition-colors border-2 ${
-                selectedInstallOption === 'no-install'
-                  ? 'bg-white border-[#024a47] text-[#024a47]'
-                  : 'bg-white border-gray-300 text-gray-900 hover:border-gray-400'
-              }`}
-            >
-              NO INSTALL
-            </button>
-            <button
-              onClick={() => setSelectedInstallOption('installation')}
-              className={`py-4 px-6 rounded-lg font-semibold text-lg transition-colors ${
-                selectedInstallOption === 'installation'
-                  ? 'bg-[#024a47] text-white'
-                  : 'bg-[#024a47] text-white hover:bg-[#035d59]'
-              }`}
-            >
-              INSTALLATION
-            </button>
-          </div>
+  <button
+    onClick={() => setSelectedInstallOption('no-install')}
+    className={`py-4 px-6 rounded-lg font-semibold text-lg transition-colors border-2 ${
+      selectedInstallOption === 'no-install'
+        ? 'bg-[#024a47] text-white border-[#024a47]'
+        : 'bg-white border-[#024a47] text-[#024a47] hover:bg-gray-50'
+    }`}
+  >
+    NO INSTALL
+  </button>
+  <button
+    onClick={() => setSelectedInstallOption('installation')}
+    className={`py-4 px-6 rounded-lg font-semibold text-lg transition-colors border-2 ${
+      selectedInstallOption === 'installation'
+        ? 'bg-[#024a47] text-white border-[#024a47]'
+        : 'bg-white border-[#024a47] text-[#024a47] hover:bg-gray-50'
+    }`}
+  >
+    INSTALLATION
+  </button>
+</div>
 
           {/* Connect to Vendor Button */}
           <button

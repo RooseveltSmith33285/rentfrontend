@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Package, Eye, MessageSquare, DollarSign, Home, LogOut, Plus, TrendingUp, Users, BarChart3, CreditCard, MessageCircle, Share, House } from "lucide-react";
+import { Package, Eye, MessageSquare, DollarSign, Home, LogOut, Plus, TrendingUp, Users, BarChart3, CreditCard, MessageCircle, Share, House, Newspaper } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from 'axios';
 import { BASE_URL } from "../baseUrl";
@@ -369,6 +369,19 @@ function VendorDashboard() {
             <div className="text-left">
               <h3 className="font-semibold text-lg">Post to Community</h3>
               <p className="text-sm opacity-75">Engage with users</p>
+            </div>
+          </button>
+
+
+
+          <button
+            onClick={() => handleNavigation('/feed')}
+            className="bg-white hover:bg-gray-50 text-[#024a47] border-2 border-[#024a47] rounded-lg p-6 flex items-center space-x-4 transition-all shadow-md"
+          >
+            <Newspaper className="w-8 h-8" />
+            <div className="text-left">
+              <h3 className="font-semibold text-lg">Feed</h3>
+             
             </div>
           </button>
         </div>
