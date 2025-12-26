@@ -283,7 +283,7 @@ console.log(e.message)
       
     } catch (error) {
       console.error('Error generating invoice:', error);
-      alert('Failed to generate invoice. Please try again.');
+      toast.error('Failed to generate invoice. Please try again.',{containerId:"dashboard"});
     }
   };
 

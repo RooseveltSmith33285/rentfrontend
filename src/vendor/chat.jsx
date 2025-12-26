@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Send, Search, Home, MoreVertical, Check, CheckCheck } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { BASE_URL } from "../baseUrl";
 import { useContext } from "react";
 
 import { SocketContext } from "../context/socketContext";
+import VendorSupportChatWidget from "./vendoradminchat";
+import { toast, ToastContainer } from "react-toastify";
 
 const containsContactInfo = (text) => {
   if (!text) return false;
@@ -354,6 +356,10 @@ function ChatPage() {
         setMessages(transformedMessages);
         
         return userId;
+      }else{
+        setTimeout(()=>{
+          setSelectedConversation(null);
+        },200)
       }
     } catch (e) {
       console.log(e.message);
@@ -543,7 +549,7 @@ console.log(response.data)
         sentBy: 'vendor'  // Keep this as sentBy for UI consistency
       };
 
-      setMessages([...messages, newMsg]);
+
       setNewMessage("");
 
       // Update last message in conversation list
@@ -617,7 +623,7 @@ if (socketRef?.socket && socketRef?.isConnected) {
     } catch (e) {
       console.log(e.message);
       setSendingMessage(false);
-      alert("Failed to send message. Please try again.");
+      toast.error("Failed to send message. Please try again.",{containerId:"vendorChat"});
     }
   };
 
@@ -666,7 +672,7 @@ if (socketRef?.socket && socketRef?.isConnected) {
 
   const downloadConversation = async () => {
     if (!selectedConversation || messages.length === 0) {
-      alert('No messages to download');
+      toast.info('No messages to download',{containerId:"vendorChat"});
       return;
     }
   
@@ -705,10 +711,47 @@ if (socketRef?.socket && socketRef?.isConnected) {
       setDownloadingConversation(false);
     } catch (error) {
       console.error('Error downloading conversation:', error);
-      alert('Failed to download conversation');
+      toast.error('Failed to download conversation',{containerId:"vendorChat"});
       setDownloadingConversation(false);
     }
   };
+
+  useEffect(() => {
+    if (socketRef?.socket && socketRef?.isConnected) {
+      const vendorId = localStorage.getItem('vendorId');
+      
+      if (selectedConversation && selectedConversation.user && selectedConversation.user._id) {
+        // Tell server which conversation vendor is viewing
+        socketRef.socket.emit('setActiveConversation', {
+          userId: vendorId,
+          conversationId: selectedConversation.user._id
+        });
+        
+        console.log(`✅ Vendor ${vendorId} now viewing conversation with user ${selectedConversation.user._id}`);
+      } else {
+        // Tell server vendor left the conversation
+        socketRef.socket.emit('setActiveConversation', {
+          userId: vendorId,
+          conversationId: null
+        });
+        
+        console.log(`✅ Vendor ${vendorId} left conversation`);
+      }
+    }
+    
+    // Cleanup when component unmounts
+    return () => {
+      if (socketRef?.socket) {
+        const vendorId = localStorage.getItem('vendorId');
+        socketRef.socket.emit('setActiveConversation', {
+          userId: vendorId,
+          conversationId: null
+        });
+      }
+    };
+  }, [selectedConversation?.user?._id, socketRef?.socket, socketRef?.isConnected]);
+  
+  const navigate=useNavigate();
 
   if (loading) {
     return (
@@ -722,13 +765,21 @@ if (socketRef?.socket && socketRef?.isConnected) {
   }
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col">
+   <>
+   <ToastContainer containerId={"vendorChat"}/>
+   
+
+
+   <div className="h-screen bg-gray-50 flex flex-col">
       {/* Header */}
+      <VendorSupportChatWidget/>
       <header className="bg-[#024a47] text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center space-x-3">
-              <button className="lg:hidden p-2 hover:bg-[#035d59] rounded-lg">
+              <button onClick={()=>{
+                navigate(-1)
+              }} className="lg:hidden p-2 hover:bg-[#035d59] rounded-lg">
                 <ArrowLeft className="w-5 h-5" />
               </button>
           <Link to='/vendordashboard'>
@@ -866,7 +917,7 @@ if (socketRef?.socket && socketRef?.isConnected) {
       <button
         onClick={() => {
           setShowOptionsMenu(false);
-          alert('Conversation reported sucessfully');
+          toast.success('Conversation reported sucessfully',{containerId:"vendorChat"});
         }}
         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
       >
@@ -1019,6 +1070,7 @@ if (socketRef?.socket && socketRef?.isConnected) {
         </div>
       </div>
     </div>
+   </>
   );
 }
 

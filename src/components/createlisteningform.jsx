@@ -9,35 +9,14 @@ export default function CreateListingForm() {
   async function uploadImages(files) {
     const urls = [];
     for (const f of files) {
-    //   const { data } = await api.post('/uploads/presign', { fileName: f.name, contentType: f.type });
-    //   await fetch(data.uploadUrl, { method: 'PUT', headers: { 'Content-Type': f.type }, body: f });
-    //   urls.push({ url: data.publicUrl, type: f.type.startsWith('video') ? 'video' : 'image' });
-    }
+  
+  }
     return urls;
   }
 
   const onSubmit = async (vals) => {
     setUploading(true);
-    // const { data: i } = await api.post('/items', {
-    //   title: vals.title, 
-    //   brand: vals.brand, 
-    //   model: vals.model, 
-    //   condition: vals.condition,
-    //   attributes: {}
-    // });
-    // const media = await uploadImages(vals.images || []);
-    // await api.post(`/items/${i.item.id}/media`, { files: media });
-    // await api.post(`/items/${i.item.id}/pricing`, {
-    //   plans: [{ 
-    //     cadence: 'MONTHLY', 
-    //     amountCents: Math.round(vals.priceMonthly * 100), 
-    //     depositCents: Math.round(vals.deposit * 100), 
-    //     minTermDays: vals.minTermDays 
-    //   }]
-    // });
-    // await api.post('/listings', { itemId: i.item.id });
-    // setUploading(false);
-    // alert('Listing published!');
+   
   };
 
   return (

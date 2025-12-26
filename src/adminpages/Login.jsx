@@ -4,6 +4,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { BASE_URL } from '../baseUrl';
+import { toast, ToastContainer } from 'react-toastify';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -50,7 +51,7 @@ setTimeout(() => {
     console.log('Email:', email);
     console.log('Password:', password);
     console.log('Remember me:', rememberMe);
-    alert('Login successful!');
+    toast.success('Login successful!',{containerId:"adminloginPage"});
     setLoading(false);
     setEmail('');
     setPassword('');
@@ -64,18 +65,23 @@ setTimeout(() => {
   }, 1500);
 }catch(e){
     if(e?.response?.data?.error){
-        alert(e?.response?.data?.error)
+        toast.error(e?.response?.data?.error,{containerId:"adminloginPage"})
     }else{
-        alert("Error while trying to login")
+        toast.error("Error while trying to login",{containerId:"adminloginPage"})
     }
 }
 
-    // Simulate API call
+
 
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center p-4">
+ <>
+ <ToastContainer containerId={"adminloginPage"}/>
+ 
+
+
+ <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-8">
         {/* Header */}
         <div className="text-center mb-8">
@@ -166,7 +172,18 @@ setTimeout(() => {
             </a>
           </p>
         </div>
+
+
+        <div className="text-center mt-6 text-sm text-gray-600">
+          <p>
+            Dont have a account?{' '}
+            <a href="/adminregister" className="text-purple-600 hover:text-purple-700 font-medium transition">
+             Register
+            </a>
+          </p>
+        </div>
       </div>
     </div>
+ </>
   );
 }

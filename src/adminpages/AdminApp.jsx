@@ -10,7 +10,7 @@ const AdminApp = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
-  // Redirect /admin to /admin/dashboard
+
   if (location.pathname === '/admin' || location.pathname === '/admin/') {
     return <Navigate to="/admin/dashboard" replace />;
   }

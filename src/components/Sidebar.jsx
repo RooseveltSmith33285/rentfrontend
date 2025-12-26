@@ -22,7 +22,8 @@ import {
   MessageSquare,
   Settings,
   Menu,
-  X
+  X,
+  HandCoins
 } from 'lucide-react';
 
 
@@ -31,10 +32,12 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     const menuItems = [
         { path: '/admin/dashboard', icon: BarChart3, label: 'Dashboard' },
         { path: '/admin/users', icon: Users, label: 'User Management' },
+        { path: '/admin/vendors', icon: Users, label: 'Vendor Management' },
         { path: '/admin/subscriptions', icon: CreditCard, label: 'Subscriptions' },
         { path: '/admin/inventory', icon: Package, label: 'Inventory' },
         { path: '/admin/analytics', icon: TrendingUp, label: 'Analytics' },
-        { path: '/admin/notifications', icon: Bell, label: 'Notifications' }
+        { path: '/admin/rentals', icon: HandCoins, label: 'Rentals' },
+        { path: '/admin/chat', icon: MessageSquare, label: 'Chat' }
       ];
     return (
       <>

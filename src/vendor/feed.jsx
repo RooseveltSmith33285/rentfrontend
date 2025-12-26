@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Heart, MessageCircle, Share2, Users, TrendingUp, Megaphone, Lightbulb, Tag, Search, X, Send, MoreVertical, Edit, Trash2, AlertCircle, Home } from 'lucide-react';
 import { BASE_URL } from '../baseUrl';
 import { Link } from 'react-router-dom';
+import VendorSupportChatWidget from './vendoradminchat';
+import { toast, ToastContainer } from 'react-toastify';
 
 function VendorCommunityFeed() {
   const [posts, setPosts] = useState([]);
@@ -303,7 +305,7 @@ console.log(data)
       } else {
        
         await navigator.clipboard.writeText(shareUrl);
-        alert('Link copied to clipboard!');
+        toast.success('Link copied to clipboard!',{containerId:"vendorFeed"});
       }
     } catch (err) {
       console.error('Share error:', err);
@@ -322,13 +324,13 @@ console.log(data)
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
+      toast.success('Post deleted successfully',{containerId:"vendorFeed"});
       setPosts(prev => prev.filter(p => p._id !== postId));
       setShowDropdown(null);
-      alert('Post deleted successfully');
 
     } catch (err) {
       console.error('Delete error:', err);
-      alert('Failed to delete post');
+      toast.error('Failed to delete post',{containerId:"vendorFeed"});
     }
   };
 
@@ -368,9 +370,13 @@ console.log(data)
   };
 
   return (
+  <>
+  <ToastContainer containerId={"vendorFeed"}/>
+  
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-20">
+      <VendorSupportChatWidget/>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -569,6 +575,15 @@ console.log(data)
                         )}
                       </div>
                     )} */}
+                          {isOwnPost && (
+                      <button
+                        onClick={() => handleDelete(post._id)}
+                        className="p-2 hover:bg-red-50 rounded-full transition-colors group"
+                        title="Delete post"
+                      >
+                        <Trash2 className="w-5 h-5 text-gray-400 group-hover:text-red-500" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -618,7 +633,7 @@ console.log(data)
                     <span>{formatNumber(post.engagement?.likes || 0)} likes</span>
                     <div className="flex items-center gap-3">
                       <span>{formatNumber(post.engagement?.comments || 0)} comments</span>
-                      <span>{formatNumber(post.engagement?.shares || 0)} shares</span>
+                 
                     </div>
                   </div>
                 </div>
@@ -767,6 +782,7 @@ console.log(data)
         )}
       </div>
     </div>
+  </>
   );
 }
 

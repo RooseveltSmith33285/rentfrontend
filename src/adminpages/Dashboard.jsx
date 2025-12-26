@@ -84,11 +84,14 @@ const Dashboard = () => {
 
         axios.get(`${BASE_URL}/get-orders?page=${activityPage}&limit=${activityPagination.limit}`),
        
-        axios.get(`${BASE_URL}/getProducts?page=1&limit=1000`)
+        axios.get(`${BASE_URL}/admin/getProducts?page=1&limit=1000`)
       ];
 
       const [usersResponse, subscriptionsResponse, productsResponse] = await Promise.allSettled(fetchPromises);
-
+console.log(subscriptionsResponse)
+console.log("SUB")
+console.log("PRODUCTS")
+console.log(productsResponse)
       let products = [];
       let subscriptions = [];
       let users = [];
@@ -97,9 +100,10 @@ const Dashboard = () => {
     
       if (productsResponse.status === 'fulfilled') {
         products = productsResponse.value.data.products || [];
+        console.log('Fetched products:', products.length, products);
       } else {
         console.error('Failed to fetch products:', productsResponse.reason);
-        toast.error('Failed to load products data');
+        toast.error('Failed to load products data',{containerId:"adminDashboard"});
       }
 
      
@@ -109,7 +113,7 @@ const Dashboard = () => {
         subscriptionPagination = subscriptionData.pagination || {};
       } else {
         console.error('Failed to fetch subscriptions:', subscriptionsResponse.reason);
-        toast.error('Failed to load subscriptions data');
+        toast.error('Failed to load subscriptions data',{containerId:"adminDashboard"});
       }
 
      
@@ -118,12 +122,15 @@ const Dashboard = () => {
         users = userData.users || [];
       } else {
         console.error('Failed to fetch users:', usersResponse.reason);
-        toast.error('Failed to load users data');
+        toast.error('Failed to load users data',{containerId:"adminDashboard"});
       }
 
       
       const stats = await calculateStats(products, users);
-      
+     
+console.log('Calculated Stats:', stats);
+console.log('Products:', products.length);
+console.log('Users:', users.length);
       setDashboardData({
         products,
         subscriptions,
@@ -144,7 +151,7 @@ const Dashboard = () => {
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      toast.error('Failed to load dashboard data');
+      toast.error('Failed to load dashboard data',{containerId:"adminDashboard"});
     } finally {
       setLoading(false);
     }
@@ -152,120 +159,118 @@ const Dashboard = () => {
 
   const calculateStats = async (products, users) => {
     try {
-     
       const allSubscriptionsResponse = await axios.get(`${BASE_URL}/get-orders?page=1&limit=10000`);
       const allSubscriptions = allSubscriptionsResponse.data.orders || [];
-
-    
-      const availableInventory = products.filter(product => 
-        product.stock_status === 'available'
-      ).length;
-
-      const rentedItems = products.filter(product => 
-        product.stock_status === 'rented'
-      ).length;
-
-      const maintenanceItems = products.filter(product => 
-        product.stock_status === 'maintenance'
-      ).length;
-
   
-      const activeSubscriptions = allSubscriptions.filter(subscription => 
-        subscription.status === 'active'
+      const availableInventory = products.filter(product => 
+        product.status === 'active' && product.availability?.isAvailable === true
       ).length;
-
+  
+      const rentedItems = products.filter(product => 
+        product.status === 'rented'
+      ).length;
+  
+      const inactiveItems = products.filter(product => 
+        product.status === 'inactive'
+      ).length;
+  
+      
+      const activeSubscriptions = allSubscriptions.filter(subscription => 
+        subscription.status === 'active' || subscription.status === 'confirmed'
+      ).length;
+  
       const pausedSubscriptions = allSubscriptions.filter(subscription => 
         subscription.status === 'paused'
       ).length;
-
+  
       const cancelledSubscriptions = allSubscriptions.filter(subscription => 
         subscription.status === 'cancelled'
       ).length;
-
+  
       
       const monthlyRevenue = allSubscriptions
-        .filter(sub => sub.status === 'active')
+        .filter(sub => sub.status === 'confirmed')
         .reduce((total, sub) => {
-          const itemsTotal = sub.items?.reduce((sum, item) => sum + (item.monthly_price || 0), 0) || 0;
-          const comboTotal = sub.comboItem?.reduce((sum, item) => sum + (item.monthly_price || 0), 0) || 0;
-          return total + itemsTotal + comboTotal;
+          return total + ((sub.totalAmount || 0) * 0.15);
         }, 0);
-
-   
+  
       const totalUsers = users.length;
-      const activeUsers = users.filter(user => !user.billingPaused).length;
-      const suspendedUsers = users.filter(user => user.billingPaused).length;
+      const activeUsers = users.filter(user => user.status === 'active').length;
+      const suspendedUsers = users.filter(user => user.status === 'suspended').length;
       const verifiedUsers = users.filter(user => user.verified === true).length;
-
+  
       return {
-   
         totalUsers,
         activeUsers,
         suspendedUsers,
         verifiedUsers,
         
-   
         totalSubscriptions: allSubscriptions.length,
         activeSubscriptions,
         pausedSubscriptions,
         cancelledSubscriptions,
         monthlyRevenue,
         
-      
         totalProducts: products.length,
         availableInventory,
         rentedItems,
-        maintenanceItems
+        inactiveItems
       };
       
     } catch (error) {
       console.error('Error calculating comprehensive stats:', error);
       
-      return {
-        totalUsers: users.length,
-        activeUsers: users.filter(user => !user.billingPaused).length,
-        suspendedUsers: users.filter(user => user.billingPaused).length,
-        verifiedUsers: users.filter(user => user.verified === true).length,
-        activeSubscriptions: 0,
-        monthlyRevenue: 0,
-        availableInventory: products.filter(product => product.stock_status === 'available').length,
-        totalProducts: products.length,
-        pausedSubscriptions: 0,
-        rentedItems: products.filter(product => product.stock_status === 'rented').length,
-        maintenanceItems: products.filter(product => product.stock_status === 'maintenance').length
-      };
+   
+return {
+  totalUsers: users.length,
+  activeUsers: users.filter(user => user.status === 'active').length,
+  suspendedUsers: users.filter(user => user.status === 'suspended').length,
+  verifiedUsers: users.filter(user => user.verified === true).length,
+  
+  totalSubscriptions: 0,
+  activeSubscriptions: 0,
+  pausedSubscriptions: 0,
+  cancelledSubscriptions: 0,
+  monthlyRevenue: 0,
+  
+  totalProducts: products.length,
+  availableInventory: products.filter(product => 
+    product.status === 'active' && product.availability?.isAvailable === true
+  ).length,
+  rentedItems: products.filter(product => product.status === 'rented').length,
+  inactiveItems: products.filter(product => product.status === 'inactive').length
+};
     }
   };
 
   const generateRecentActivity = async (subscriptions, users) => {
-  
     const userMap = users.reduce((map, user) => {
       map[user._id] = user;
       return map;
     }, {});
-
-   
+  
     const recent = subscriptions
       .sort((a, b) => new Date(b.createdAt || b.deliveryDate) - new Date(a.createdAt || a.deliveryDate))
       .map(sub => {
-        const user = userMap[sub.user];
+       
+        const userId = typeof sub.user === 'object' ? sub.user._id : sub.user;
+        const user = typeof sub.user === 'object' ? sub.user : userMap[userId];
+        
         return {
           id: sub._id,
-          userId: sub.user,
+          userId: userId,
           userName: user ? (user.name || user.email || 'Unknown User') : 'Unknown User',
           userEmail: user ? user.email : '',
           status: sub.status,
           deliveryDate: sub.deliveryDate,
           createdAt: sub.createdAt,
-          itemCount: (sub.items?.length || 0) + (sub.comboItem?.length || 0),
-          monthlyTotal: (sub.items?.reduce((sum, item) => sum + (item.monthly_price || 0), 0) || 0) +
-                       (sub.comboItem?.reduce((sum, item) => sum + (item.monthly_price || 0), 0) || 0)
+          listingTitle: sub.listing?.title || 'N/A',
+          monthlyTotal: sub.monthlyRent || 0
         };
       });
     
     setRecentActivity(recent);
   };
-
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -298,19 +303,17 @@ const Dashboard = () => {
   };
 
   const getChangePercentage = (current, category) => {
+  
+    if (!current || current === 0) {
+      return null; 
+    }
     
-    const mockChanges = {
-      totalUsers: '+12%',
-      activeSubscriptions: '+8%',
-      monthlyRevenue: '+15%',
-      availableInventory: '-5%'
-    };
-    return mockChanges[category] || '+0%';
+   
   };
 
   const handleRefresh = () => {
     fetchAllDashboardData();
-    toast.success('Dashboard refreshed successfully');
+    toast.success('Dashboard refreshed successfully',{containerId:"adminDashboard"});
   };
 
   const handleActivityPageChange = (newPage) => {
@@ -362,7 +365,7 @@ const Dashboard = () => {
 
   return (
     <>
-      <ToastContainer containerId={"dashboard"} />
+      <ToastContainer containerId={"adminDashboard"} />
       <div className="p-6">
      
         <div className="flex justify-between items-center mb-8">
@@ -389,29 +392,30 @@ const Dashboard = () => {
 
        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {statsCards.map((stat, index) => (
-            <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 relative">
-              {loading && (
-                <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
-                </div>
-              )}
-              <div className="flex items-center justify-between mb-4">
-                <div className={`p-3 rounded-lg ${stat.color}`}>
-                  <stat.icon className="h-6 w-6 text-white" />
-                </div>
-                <span className={`text-sm font-medium ${stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
-                  {stat.change}
-                </span>
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-gray-900">{stat.value}</h3>
-                <p className="text-gray-600 text-sm">{stat.title}</p>
-              </div>
-            </div>
-          ))}
+  {statsCards.map((stat, index) => (
+    <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 relative">
+      {loading && (
+        <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
         </div>
-
+      )}
+      <div className="flex items-center justify-between mb-4">
+        <div className={`p-3 rounded-lg ${stat.color}`}>
+          <stat.icon className="h-6 w-6 text-white" />
+        </div>
+        {stat.change && (
+          <span className={`text-sm font-medium ${stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
+            {stat.change}
+          </span>
+        )}
+      </div>
+      <div>
+        <h3 className="text-2xl font-bold text-gray-900">{stat.value}</h3>
+        <p className="text-gray-600 text-sm">{stat.title}</p>
+      </div>
+    </div>
+  ))}
+</div>
    
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -454,18 +458,18 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Maintenance Items</p>
-                <p className="text-2xl font-bold text-red-600">
-                  {dashboardData.stats.maintenanceItems?.toLocaleString() || '0'}
-                </p>
-              </div>
-              <div className="p-3 bg-red-100 rounded-full">
-                <Settings className="h-6 w-6 text-red-600" />
-              </div>
-            </div>
-          </div>
+  <div className="flex items-center justify-between">
+    <div>
+      <p className="text-sm font-medium text-gray-600">Inactive Items</p>
+      <p className="text-2xl font-bold text-red-600">
+        {dashboardData.stats.inactiveItems?.toLocaleString() || '0'}
+      </p>
+    </div>
+    <div className="p-3 bg-red-100 rounded-full">
+      <XCircle className="h-6 w-6 text-red-600" />
+    </div>
+  </div>
+</div>
         </div>
 
        
@@ -486,34 +490,28 @@ const Dashboard = () => {
                 </div>
               )}
               
-              {recentActivity.length > 0 ? (
-                recentActivity.map(activity => (
-                  <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">{activity.userName}</p>
-                      <p className="text-xs text-gray-500 truncate max-w-48">{activity.userEmail}</p>
-                      <p className="text-sm text-gray-600">
-                        {activity.itemCount} items - {formatCurrency(activity.monthlyTotal)}/month
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-500">
-                        {formatDate(activity.deliveryDate || activity.createdAt)}
-                      </p>
-                      <span className={`inline-flex px-2 py-1 text-xs rounded-full ${getStatusColor(activity.status)}`}>
-                        {activity.status}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center text-gray-500 py-8">
-                  <Package className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-                  <p>No subscription orders found</p>
-                </div>
-              )}
-            </div>
+              {recentActivity.map(activity => (
+  <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+    <div>
+      <p className="font-medium text-gray-900">{activity.userName}</p>
+      <p className="text-xs text-gray-500 truncate max-w-48">{activity.userEmail}</p>
+      <p className="text-sm text-gray-600">
+        {activity.listingTitle} - {formatCurrency(activity.monthlyTotal)}/month
+      </p>
+    </div>
+    <div className="text-right">
+      <p className="text-sm text-gray-500">
+        {formatDate(activity.deliveryDate || activity.createdAt)}
+      </p>
+      <span className={`inline-flex px-2 py-1 text-xs rounded-full ${getStatusColor(activity.status)}`}>
+        {activity.status}
+      </span>
+    </div>
+  </div>
+))}
+         </div>
             
+        
         
             {activityPagination.totalPages > 1 && (
               <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
@@ -575,10 +573,7 @@ const Dashboard = () => {
                   <p className="text-sm font-medium text-gray-800">
                     {dashboardData.stats.totalUsers?.toLocaleString() || '0'} registered users
                   </p>
-                  <p className="text-xs text-gray-600">
-                    {dashboardData.stats.activeUsers?.toLocaleString() || '0'} active • {dashboardData.stats.verifiedUsers?.toLocaleString() || '0'} verified
-                    {dashboardData.stats.suspendedUsers > 0 && ` • ${dashboardData.stats.suspendedUsers.toLocaleString()} suspended`}
-                  </p>
+                 
                 </div>
               </div>
 
@@ -593,18 +588,17 @@ const Dashboard = () => {
                   </div>
                 </div>
               )}
-
-              {dashboardData.stats.maintenanceItems > 0 && (
-                <div className="flex items-center p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                  <AlertTriangle className="h-5 w-5 text-orange-500 mr-3" />
-                  <div>
-                    <p className="text-sm font-medium text-orange-800">
-                      {dashboardData.stats.maintenanceItems?.toLocaleString()} items in maintenance
-                    </p>
-                    <p className="text-xs text-orange-600">Check maintenance schedule</p>
-                  </div>
-                </div>
-              )}
+{dashboardData.stats.inactiveItems > 0 && (
+  <div className="flex items-center p-3 bg-red-50 border border-red-200 rounded-lg">
+    <XCircle className="h-5 w-5 text-red-500 mr-3" />
+    <div>
+      <p className="text-sm font-medium text-red-800">
+        {dashboardData.stats.inactiveItems?.toLocaleString()} inactive items
+      </p>
+      <p className="text-xs text-red-600">Items not available for rent</p>
+    </div>
+  </div>
+)}
             </div>
           </div>
         </div>

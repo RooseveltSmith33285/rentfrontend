@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
 import { ArrowLeft, Send, Search, Home, MoreVertical, Check, CheckCheck } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { BASE_URL } from "../baseUrl";
 import { SocketContext } from "../context/socketContext";
+import SupportChatWidget from "./useradminchat";
+import { toast, ToastContainer } from "react-toastify";
 
 
 
@@ -316,6 +318,41 @@ socket.on('newMessage', (data) => {
     };
   }, [selectedConversation, socketRef]);
 
+  // ⭐ NEW: Broadcast active conversation to server
+useEffect(() => {
+  if (socketRef?.socket) {
+    const userId = localStorage.getItem('userId');
+    
+    if (selectedConversation && selectedConversation.vendor && selectedConversation.vendor._id) {
+      // Tell server which conversation user is viewing
+      socketRef.socket.emit('setActiveConversation', {
+        userId: userId,
+        conversationId: selectedConversation.vendor._id
+      });
+      
+      console.log(`✅ User ${userId} now viewing conversation with vendor ${selectedConversation.vendor._id}`);
+    } else {
+      // Tell server user left the conversation
+      socketRef.socket.emit('setActiveConversation', {
+        userId: userId,
+        conversationId: null
+      });
+      
+      console.log(`✅ User ${userId} left conversation`);
+    }
+  }
+  
+  // Cleanup when component unmounts
+  return () => {
+    if (socketRef?.socket) {
+      const userId = localStorage.getItem('userId');
+      socketRef.socket.emit('setActiveConversation', {
+        userId: userId,
+        conversationId: null
+      });
+    }
+  };
+}, [selectedConversation?.vendor?._id, socketRef?.socket]);
   // Connect socket on mount
 useEffect(() => {
     if (socketRef?.socket) {
@@ -326,6 +363,8 @@ useEffect(() => {
       });
     }
   }, [socketRef]);
+
+  const navigate=useNavigate()
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -385,10 +424,16 @@ useEffect(() => {
         setMessages(transformedMessages);
         
         return vendorId;
+      }else{
+      
+        setTimeout(()=>{
+          setSelectedConversation(null);
+        },200)
       }
     } catch (e) {
       console.log(e.message);
     }
+    
     return null;
   };
 
@@ -593,7 +638,7 @@ useEffect(() => {
     } catch (e) {
       console.log(e.message);
       setSendingMessage(false);
-      alert("Failed to send message. Please try again.");
+      toast.error("Failed to send message. Please try again.",{containerId:"renterChatPage"});
     }
   };
 
@@ -643,7 +688,7 @@ useEffect(() => {
   // ADD THIS NEW FUNCTION
   const downloadConversation = async () => {
     if (!selectedConversation || messages.length === 0) {
-      alert('No messages to download');
+      toast.info('No messages to download',{containerId:"renterChatPage"});
       return;
     }
   
@@ -683,7 +728,7 @@ useEffect(() => {
       setDownloadingConversation(false);
     } catch (error) {
       console.error('Error downloading conversation:', error);
-      alert('Failed to download conversation');
+      toast.error('Failed to download conversation',{containerId:"renterChatPage"});
       setDownloadingConversation(false);
     }
   };
@@ -699,18 +744,23 @@ useEffect(() => {
       </div>
     );
   }
+ 
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col">
-      {/* Header */}
+   <>
+   <ToastContainer containerId={"renterChatPage"}/>
+   <div className="h-screen bg-gray-50 flex flex-col">
+   <SupportChatWidget/>
       <header className="bg-[#024a47] text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center space-x-3">
-              <button className="lg:hidden p-2 hover:bg-[#035d59] rounded-lg">
+              <button onClick={()=>{
+                navigate(-1)
+              }} className="lg:hidden p-2 hover:bg-[#035d59] rounded-lg">
                 <ArrowLeft className="w-5 h-5" />
               </button>
-          <Link to='/appliance'>
+          <Link to='/renterdashboard'>
           <button className="hidden lg:flex items-center space-x-2 hover:opacity-80">
                 <Home className="w-5 h-5" />
                 <span>Dashboard</span>
@@ -727,9 +777,9 @@ useEffect(() => {
       </header>
 
       <div className="flex-1 flex overflow-hidden max-w-7xl mx-auto w-full">
-        {/* Conversations List */}
+       
         <div className={`${selectedConversation ? 'hidden lg:block' : 'block'} w-full lg:w-96 bg-white border-r border-gray-200 flex flex-col`}>
-          {/* Search */}
+         
           <div className="p-4 border-b border-gray-200">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -743,7 +793,7 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* Conversation List */}
+         
           <div className="flex-1 overflow-y-auto">
             {filteredConversations.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full p-8 text-center">
@@ -789,29 +839,49 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Chat Area */}
+       
         <div className={`${selectedConversation ? 'flex' : 'hidden lg:flex'} flex-1 flex-col bg-white`}>
           {selectedConversation ? (
             <>
-              {/* Chat Header */}
-              <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <button
-                    onClick={() => setSelectedConversation(null)}
-                    className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
-                  >
-                    <ArrowLeft className="w-5 h-5 text-gray-600" />
-                  </button>
-                  <div className="w-10 h-10 bg-[#024a47] rounded-full flex items-center justify-center text-white font-semibold">
-                    {(selectedConversation.vendor.businessName || selectedConversation.vendor.name || 'V').charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <h2 className="font-semibold text-gray-900">
-                      {selectedConversation.vendor.businessName || selectedConversation.vendor.name || 'Vendor'}
-                    </h2>
-                    <p className="text-xs text-gray-500 capitalize">Vendor</p>
-                  </div>
-                </div>
+            <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+  <div className="flex items-center space-x-3">
+    <button
+      id="showconversations"
+      onClick={() => setSelectedConversation(null)}
+      className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
+    >
+      <ArrowLeft className="w-5 h-5 text-gray-600" />
+    </button>
+    <div className="w-10 h-10 bg-[#024a47] rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+      {(selectedConversation.vendor.businessName || selectedConversation.vendor.name || 'V').charAt(0).toUpperCase()}
+    </div>
+    <div className="min-w-0">
+      <h2 className="font-semibold text-gray-900 truncate">
+        {selectedConversation.vendor.businessName || selectedConversation.vendor.name || 'Vendor'}
+      </h2>
+      <div className="flex flex-col gap-0.5">
+        {selectedConversation.vendor.email && (
+          <p className="text-xs text-gray-500 truncate flex items-center gap-1">
+            <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            {selectedConversation.vendor.email}
+          </p>
+        )}
+        {selectedConversation.vendor.mobile && (
+          <p className="text-xs text-gray-500 flex items-center gap-1">
+            <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            </svg>
+            {selectedConversation.vendor.mobile}
+          </p>
+        )}
+        {!selectedConversation.vendor.email && !selectedConversation.vendor.mobile && (
+          <p className="text-xs text-gray-500 capitalize">Vendor</p>
+        )}
+      </div>
+    </div>
+  </div>
                 <div className="relative" ref={optionsMenuRef}>
   <button 
     onClick={() => setShowOptionsMenu(!showOptionsMenu)}
@@ -845,7 +915,7 @@ useEffect(() => {
       <button
         onClick={() => {
           setShowOptionsMenu(false);
-          alert('Conversation report sucessfully');
+        toast.success('Conversation report sucessfully',{containerId:"renterChatPage"});
         }}
         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
       >
@@ -859,7 +929,7 @@ useEffect(() => {
 </div>
               </div>
 
-              {/* Messages */}
+            
               <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
                 {messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full">
@@ -931,7 +1001,7 @@ useEffect(() => {
                               </div>
                               <div className={`flex items-center space-x-1 mt-1 px-1 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
                                 <span className="text-xs text-gray-500">{formatTime(msg.timestamp)}</span>
-                                {/* Show read status for user messages (sent by current user) */}
+                             
                                 {isCurrentUser && (
                                   msg.read ? (
                                     <CheckCheck className="w-3 h-3 text-blue-500" />
@@ -939,7 +1009,7 @@ useEffect(() => {
                                     <Check className="w-3 h-3 text-gray-400" />
                                   )
                                 )}
-                                {/* Show read status for vendor messages (when user has seen them) */}
+                                
                                 {!isCurrentUser && msg.read && (
                                   <CheckCheck className="w-3 h-3 text-blue-500" />
                                 )}
@@ -954,7 +1024,7 @@ useEffect(() => {
                 )}
               </div>
 
-              {/* Message Input */}
+          
               <div className="bg-white border-t border-gray-200 p-4">
                 <div className="flex items-end space-x-2">
                   <textarea
@@ -1007,6 +1077,7 @@ useEffect(() => {
         </div>
       </div>
     </div>
+   </>
   );
 }
 

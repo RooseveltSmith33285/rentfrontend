@@ -59,6 +59,17 @@ import UserChatPage from './pages/chat.jsx'
 import SocketProvider from './context/socketContext.jsx'
 import VendorRequestsListPage from './vendor/vendorrequestlist.jsx'
 import RenterDashboard from './pages/renterdashboard.jsx'
+import AdminRegister from './adminpages/Register.jsx'
+import VendorManagement from './adminpages/vendormanagement.jsx'
+import RentalsManagement from './adminpages/rentals.jsx'
+import AdminChatPage from './adminpages/chat.jsx'
+import VendorSupportChatWidget from './vendor/vendoradminchat.jsx'
+import AdminSocketProvider from './context/adminSocketContext.jsx'
+import ProtectedRoute from './components/UserMiddleware.jsx'
+import VendorProtectedRoute from './components/vendorMiddleware.jsx'
+import VendorProfile from './vendor/vendorprofile.jsx'
+import UserProfile from './pages/userprofile.jsx'
+import ActiveRentals from './vendor/activeRentals.jsx'
 
 const stripePromise = loadStripe("pk_test_51OwuO4LcfLzcwwOYdssgGfUSfOgWT1LwO6ewi3CEPewY7WEL9ATqH6WJm3oAcLDA3IgUvVYLVEBMIEu0d8fUwhlw009JwzEYmV");
 
@@ -68,13 +79,25 @@ createRoot(document.getElementById('root')).render(
     <SocketProvider>
     <BrowserRouter>
         <Routes>
-          {/* User-side routes */}
           <Route path="/" element={<App />} />
-          <Route path="/appliance" element={<ApplianceRentalPage />} />
+        <Route element={<ProtectedRoute/>}>
+        <Route path='/renterDashboard' element={<RenterDashboard/>}/>
+        <Route path='/profile' element={<UserProfile/>}/>
+        <Route path="/appliance" element={<ApplianceRentalPage />} />
+        <Route path='/userchat' element={<UserChatPage/>}/>
+        <Route path='/renterconfirmation' element={<UnitPurchasePage/>}/>
+        </Route>
+        <Route element={<VendorProtectedRoute/>}>
+        <Route path='/activerentals' element={<ActiveRentals/>}/>
+        <Route path='/vendorprofile' element={<VendorProfile/>}/>
+        <Route path='/vendordashboard' element={<VendorDashboard/>}/>
+        <Route path='/chat' element={<ChatPage/>}/>
+        <Route path='/feeddisplay' element={<FeedDisplay/>}/>
+        </Route>
           <Route path="/freezer" element={<FreezerTroubleshooting />} />
           <Route path="/refrigerator" element={<RefrigeratorTroubleshooting />} />
           <Route path="/dryer" element={<DryerTroubleshooting />} />
-          <Route path='/userchat' element={<UserChatPage/>}/>
+        
           <Route path="/washer" element={<WasherTroubleshooting />} />
           <Route path='/requestlist' element={<VendorRequestsListPage/>}/>
           <Route path='/listening' element={<ListingCreationFlow/>}/>
@@ -83,24 +106,25 @@ createRoot(document.getElementById('root')).render(
           <Route path="/billing" element={<BillingDetailsForm/>} />
           <Route path="/delivery" element={<DeliveryAppointmentPage />} />
           <Route path="/confirm" element={<ConfirmSubmitPage />} />
-          <Route path='/renterconfirmation' element={<UnitPurchasePage/>}/>
-          <Route path="/dashboard" element={<RentSimpleAccount/>} />
-          <Route path='/renterDashboard' element={<RenterDashboard/>}/>
+      
+         
           <Route path="/reset-password" element={<Resetpassword/>} />
           <Route path="/confirmation" element={<OrderConfirmation/>} />
           <Route path="/contact" element={<ContactSupport/>} />
-          <Route path='/vendordashboard' element={<VendorDashboard/>}/>
+          
+          <Route path='/vendoradminchat' element={<VendorSupportChatWidget/>}/>
           <Route path='/community/:id' element={<IndividualPostPage/>}/>
-        <Route path='/feeddisplay' element={<FeedDisplay/>}/>
+     
           <Route path='/subscription' element={<SubscriptionComponent/>}/>
           {/* Admin Login Route (Public) */}
           <Route path="/adminlogin" element={<AdminLogin/>} />
           <Route path="/adminreset" element={<AdminReset/>} />
+          <Route path='/adminregister' element={<AdminRegister/>}/>
           <Route path='/boostinginterface' element={<BoostingInterface/>}/>
           <Route path='/community' element={<CommunityPostPage/>  }/>
           <Route path='/mylistenings' element={<VendorFeed/>}/>
           <Route path='/feed' element={<VendorCommunityFeed/>}/>
-          <Route path='/chat' element={<ChatPage/>}/>
+          
 <Route path='/boost' element={<BoostListingPage/>}/>
             <Route path='/vendorlogin' element={<VendorLogin/>}/>
             <Route path='/vendorregister' element={<VendorSignup/>}/>
@@ -111,10 +135,20 @@ createRoot(document.getElementById('root')).render(
               <Route index element={<AdminDashboard />} />
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="users" element={<AdminUserManagement />} />
+              <Route path="rentals" element={<RentalsManagement />} />
+              <Route path='vendors' element={<VendorManagement/>}/>
               <Route path="subscriptions" element={<AdminSubscriptionManagement />} />
               <Route path="inventory" element={<AdminInventoryManagement />} />
               <Route path="analytics" element={<AdminAnalytics />} />
               <Route path="notifications" element={<AdminNotifications />} />
+              <Route 
+  path="chat" 
+  element={
+    <AdminSocketProvider>
+      <AdminChatPage />
+    </AdminSocketProvider>
+  }
+/>
             </Route>
           </Route>
         </Routes>

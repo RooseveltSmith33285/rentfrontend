@@ -209,64 +209,36 @@ const SubscriptionManagement = () => {
       setLoading(true);
       
      
+    
+    
       const queryParams = new URLSearchParams({
         page: currentPage.toString(),
         limit: itemsPerPage.toString(),
         search: searchTerm,
-        status: statusFilter
+        status: statusFilter !== 'all' ? statusFilter : ''
       });
-
-    
-      let response = await axios.get(`${BASE_URL}/get-orders`);
+      
+      let response = await axios.get(`${BASE_URL}/get-orders?${queryParams}`);
       console.log("subscriptions get", response.data);
       
       const allOrders = response.data.orders || [];
       setAllSubscriptions(allOrders);
       
      
-      let filteredOrders = allOrders;
-      
-      
-      if (searchTerm) {
-        filteredOrders = filteredOrders.filter(sub => 
-          (sub.subscriptionId && sub.subscriptionId.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (sub._id && sub._id.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (sub.user && sub.user.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (sub.locationName && sub.locationName.toLowerCase().includes(searchTerm.toLowerCase()))
-        );
-      }
-      
-    
-      if (statusFilter !== 'all') {
-        filteredOrders = filteredOrders.filter(sub => 
-          sub.status && sub.status.toLowerCase() === statusFilter.toLowerCase()
-        );
-      }
-      
-    
-      const totalSubscriptions = filteredOrders.length;
-      const totalPages = Math.ceil(totalSubscriptions / itemsPerPage);
-      const startIndex = (currentPage - 1) * itemsPerPage;
-      const endIndex = startIndex + itemsPerPage;
-      const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
-      
-      setSubscriptions(paginatedOrders);
-      setPagination({
-        currentPage,
-        totalPages,
-        totalSubscriptions,
-        limit: itemsPerPage,
-        hasNext: currentPage < totalPages,
-        hasPrev: currentPage > 1
-      });
-      
-      if (paginatedOrders.length > 0) {
-      
-      }
+   
+   setSubscriptions(allOrders);
+   setPagination({
+     currentPage: response.data.pagination.currentPage,
+     totalPages: response.data.pagination.totalPages,
+     totalSubscriptions: response.data.pagination.totalOrders,
+     limit: response.data.pagination.limit,
+     hasNext: response.data.pagination.hasNext,
+     hasPrev: response.data.pagination.hasPrev
+   });
       
     } catch (error) {
       console.error('Error fetching subscriptions:', error);
-      toast.error('Failed to fetch subscriptions', { containerId: 'subscriptionPage' });
+      toast.error('Failed to fetch subscriptions', { containerId: 'adminsubscriptionPage' });
       setSubscriptions([]);
       setAllSubscriptions([]);
       setPagination({
@@ -286,16 +258,16 @@ const SubscriptionManagement = () => {
     
     const allSubs = allSubscriptions;
     const total = allSubs.length;
-    const active = allSubs.filter(sub => sub.status === 'active').length;
+    const active = allSubs.filter(sub => sub.status === 'confirmed' || sub.status === 'active').length;
     const paused = allSubs.filter(sub => sub.status === 'paused').length;
     const cancelled = allSubs.filter(sub => sub.status === 'cancelled').length;
 
     const monthlyRevenue = allSubs
-      .filter(sub => sub.status === 'active')
+      .filter(sub => sub.status === 'confirmed' || sub.status === 'active')
       .reduce((total, sub) => {
-        const itemsTotal = sub.items?.reduce((sum, item) => sum + (item.monthly_price || 0), 0) || 0;
-        const comboTotal = sub.comboItem?.reduce((sum, item) => sum + (item.monthly_price || 0), 0) || 0;
-        return total + itemsTotal + comboTotal;
+        const orderTotal = sub.totalAmount || 0;
+        const monthlyAmount = orderTotal * 0.15; 
+        return total + monthlyAmount;
       }, 0);
     
     return { total, active, paused, cancelled, monthlyRevenue };
@@ -306,6 +278,7 @@ const SubscriptionManagement = () => {
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'active':
+      case 'confirmed':
         return 'bg-green-100 text-green-800';
       case 'paused':
         return 'bg-yellow-100 text-yellow-800';
@@ -326,11 +299,8 @@ const SubscriptionManagement = () => {
       day: 'numeric'
     });
   };
-
   const calculateSubscriptionTotal = (subscription) => {
-    const itemsTotal = subscription.items?.reduce((sum, item) => sum + (item.monthly_price || 0), 0) || 0;
-    const comboTotal = subscription.comboItem?.reduce((sum, item) => sum + (item.monthly_price || 0), 0) || 0;
-    return itemsTotal + comboTotal;
+    return subscription.totalAmount || subscription.monthlyRent || 0;
   };
 
   const handleViewSubscription = (subscription) => {
@@ -362,10 +332,10 @@ const SubscriptionManagement = () => {
         await axios.patch(`${BASE_URL}/pauseSubscription/${subscriptionId}`);
       }
       
-      toast.success(`Subscription ${newStatus} successfully!`, { containerId: 'subscriptionPage' });
+      toast.success(`Subscription ${newStatus} successfully!`, { containerId: 'adminsubscriptionPage' });
     } catch (error) {
       console.error('Error updating subscription status:', error);
-      toast.error('Failed to update subscription status', { containerId: 'subscriptionPage' });
+      toast.error('Failed to update subscription status', { containerId: 'adminsubscriptionPage' });
       
   
       getSubscriptions();
@@ -400,7 +370,7 @@ const SubscriptionManagement = () => {
 
   return (
     <>
-      <ToastContainer containerId={"subscriptionPage"} />
+      <ToastContainer containerId={"adminsubscriptionPage"} />
 
       <div className="p-6">
         
@@ -429,15 +399,16 @@ const SubscriptionManagement = () => {
             <div className="relative">
               <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <select
-                className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="paused">Paused</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
+  className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+  value={statusFilter}
+  onChange={(e) => setStatusFilter(e.target.value)}
+>
+  <option value="all">All Status</option>
+  <option value="confirmed">Confirmed</option>
+  <option value="active">Active</option>
+  <option value="paused">Paused</option>
+  <option value="cancelled">Cancelled</option>
+</select>
             </div>
 
             <div className="relative">
@@ -551,9 +522,7 @@ const SubscriptionManagement = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subscription ID</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery Time</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Total</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -568,52 +537,48 @@ const SubscriptionManagement = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {subscription.user || 'N/A'}
-                        </div>
-                      </td>
+  <div className="text-sm font-medium text-gray-900">
+    {subscription.user?.name || subscription.user?.email || 'N/A'}
+  </div>
+  {subscription.user?.phone && (
+    <div className="text-xs text-gray-500">{subscription.user.phone}</div>
+  )}
+</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(subscription.status)}`}>
                           {subscription.status || 'Unknown'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatDate(subscription.deliveryDate)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {subscription.deliveryTime || 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          <div className="flex items-center">
-                            <MapPin className="h-3 w-3 text-gray-400 mr-1" />
-                            <span className="truncate max-w-32" title={subscription.locationName}>
-                              {subscription.locationName || 'N/A'}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
                       <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">
-                          <div className="space-y-1">
-                            {subscription.items?.slice(0, 2).map((item, index) => (
-                              <div key={index} className="text-xs bg-blue-100 px-2 py-1 rounded">
-                                {item.name} - ${item.monthly_price}/mo
-                              </div>
-                            ))}
-                            {subscription.comboItem?.slice(0, 1).map((item, index) => (
-                              <div key={`combo-${index}`} className="text-xs bg-purple-100 px-2 py-1 rounded">
-                                {item.name || item.plugType} (Combo) - ${item.monthly_price || 0}/mo
-                              </div>
-                            ))}
-                            {(subscription.items?.length > 2 || subscription.comboItem?.length > 1) && (
-                              <div className="text-xs text-gray-500">
-                                +{(subscription.items?.length || 0) + (subscription.comboItem?.length || 0) - 2} more
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </td>
+  <div className="text-sm text-gray-900">
+    <div className="space-y-1">
+      {subscription.listing && (
+        <div className="text-xs bg-blue-100 px-2 py-1 rounded">
+          {subscription.listing.title}
+        </div>
+      )}
+      {subscription.items?.slice(0, 2).map((item, index) => (
+        <div key={`item-${index}`} className="text-xs bg-blue-100 px-2 py-1 rounded">
+          {item.name}
+        </div>
+      ))}
+      {subscription.comboItem?.slice(0, 1).map((item, index) => (
+        <div key={`combo-${index}`} className="text-xs bg-purple-100 px-2 py-1 rounded">
+          {item.name || item.plugType} (Combo)
+        </div>
+      ))}
+      {((subscription.listing ? 1 : 0) + (subscription.items?.length || 0) + (subscription.comboItem?.length || 0) > 3) && (
+        <div className="text-xs text-gray-500">
+          +{(subscription.listing ? 1 : 0) + (subscription.items?.length || 0) + (subscription.comboItem?.length || 0) - 3} more
+        </div>
+      )}
+      {!subscription.listing && !subscription.items?.length && !subscription.comboItem?.length && (
+        <div className="text-xs text-gray-400">No items</div>
+      )}
+    </div>
+  </div>
+</td>
+
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-bold text-green-600">
                           ${calculateSubscriptionTotal(subscription).toFixed(2)}/mo
@@ -721,9 +686,17 @@ const SubscriptionManagement = () => {
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-600">Customer ID:</span>
-                          <span className="text-sm text-gray-900 font-mono">{selectedSubscription.user}</span>
-                        </div>
+  <span className="text-sm font-medium text-gray-600">Customer:</span>
+  <span className="text-sm text-gray-900">
+    {selectedSubscription.user?.name || selectedSubscription.user?.email || 'N/A'}
+  </span>
+</div>
+{selectedSubscription.user?.phone && (
+  <div className="flex justify-between items-center">
+    <span className="text-sm font-medium text-gray-600">Phone:</span>
+    <span className="text-sm text-gray-900">{selectedSubscription.user.phone}</span>
+  </div>
+)}
                         <div className="flex justify-between items-center">
                           <span className="text-sm font-medium text-gray-600">Status:</span>
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(selectedSubscription.status)}`}>

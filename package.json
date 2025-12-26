@@ -14,6 +14,7 @@
     "@tailwindcss/vite": "^4.1.13",
     "axios": "^1.12.2",
     "jspdf": "^3.0.3",
+    "lightbox.js-react": "^1.6.4",
     "lucide-react": "^0.544.0",
     "mapbox-gl": "^2.15.0",
     "react": "^19.1.1",

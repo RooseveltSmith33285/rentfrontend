@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { Package, Eye, MessageSquare, DollarSign, Home, LogOut, Clock, CheckCircle, XCircle, FileText, CreditCard, MessageCircle, User, CrossIcon } from "lucide-react";
+import { Package, Eye,MessageCircleCode,MessageSquare, DollarSign, Home, LogOut, Clock, CheckCircle, XCircle, FileText, CreditCard, MessageCircle, User, CrossIcon } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from 'axios';
 import { BASE_URL } from "../baseUrl";
+import SupportChatWidget from "./useradminchat";
+import { toast, ToastContainer } from "react-toastify";
 
+
+const FIXED_WARRANTY_FEE = 15; 
 function RenterDashboard() {
   const navigate = useNavigate();
   
@@ -59,42 +63,101 @@ function RenterDashboard() {
     navigate(path);
   };
 
+  const getWarrantyFee = (receipt) => {
+    console.log('getwrranty')
+    console.log(receipt)
+    if (receipt?.powerType == 'Warranty') {
+      return FIXED_WARRANTY_FEE;
+    }
+    return 0;
+  };
 
 
 
   const downloadReceipt = (receipt) => {
-    // Prepare CSV data
-    const csvData = [
-      ['Receipt Details', ''],
-      ['Receipt Number', receipt.receiptNumber],
-      ['Date', new Date(receipt.date).toLocaleDateString()],
-      ['', ''],
-      ['Item Details', ''],
-      ['Appliance', receipt.applianceName],
-      ['', ''],
-      ['Payment Details', ''],
-      ['Amount', `$${receipt.amount.toFixed(2)}`],
-      ['Status', receipt.status],
-      ['', ''],
-      ['Generated on', new Date().toLocaleString()]
-    ];
+    try {
+     
+      const vendorFee = (receipt.amount || 0) * 0.20;
   
-    // Convert to CSV string
-    const csvContent = csvData.map(row => row.join(',')).join('\n');
+      const receiptContent = `
+  RECEIPT
+  ${'-'.repeat(50)}
   
-    // Create blob and download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `receipt_${receipt.receiptNumber}.csv`);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  Order Number: ${receipt.receiptNumber}
+  Date: ${new Date(receipt.date).toLocaleString()}
+  
+  ${'-'.repeat(50)}
+  ITEM DETAILS
+  ${'-'.repeat(50)}
+  
+  Item: ${receipt.applianceName || 'N/A'}
+  Brand: ${receipt.brand || 'N/A'}
+  Power Type: ${receipt.powerType || 'N/A'}
+  Monthly Rent: $${receipt.monthlyRent?.toFixed(2) || '0.00'}
+  
+  ${'-'.repeat(50)}
+  PAYMENT DETAILS
+  ${'-'.repeat(50)}
+  
+  First Month Rent          $${receipt.monthlyRent?.toFixed(2) || '0.00'}
+ ${receipt?.powerType === 'Warranty'
+    ? `Warranty Protection (monthly) $${getWarrantyFee(receipt)}`
+    : ''
+  }
+  Delivery Fee              $${receipt.deliveryPrice?.toFixed(2) || '0.00'}
+  Installation Fee          $${receipt.installationPrice?.toFixed(2) || '0.00'}
+  Service & Vendor Fee      $${vendorFee.toFixed(2)}
+  
+  ${receipt.creditsApplied > 0 ? `
+  Subtotal                  $${receipt.subtotal?.toFixed(2) || '0.00'}
+  Credits Applied          -$${receipt.creditsApplied?.toFixed(2) || '0.00'}
+  ` : ''}
+  
+  ${'-'.repeat(50)}
+  TOTAL PAID                $${receipt.amount?.toFixed(2) || '0.00'}
+  
+  ${'-'.repeat(50)}
+  DELIVERY INFORMATION
+  ${'-'.repeat(50)}
+  
+  Delivery Type: ${receipt.deliveryType === 'pickup' ? 'Self Pickup' : 'Delivery'}
+  ${receipt.deliveryType === 'pickup' && receipt.pickUpAddress
+    ? `Pickup Location: ${receipt.pickUpAddress}`
+    : ''
+  }
+  Installation Type: ${receipt.installationType === 'no-install'
+    ? 'Self Installation'
+    : 'Professional Installation'
+  }
+  
+  ${'-'.repeat(50)}
+  
+  Generated On: ${new Date().toLocaleString()}
+  
+  ${'-'.repeat(50)}
+  
+  Thank you for your order!
+  For support, contact: rentsimple159@gmail.com
+  
+  ${'-'.repeat(50)}
+      `.trim();
+  
+      const blob = new Blob([receiptContent], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `receipt-${receipt.receiptNumber}-${new Date().toISOString().split('T')[0]}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+  
+    } catch (error) {
+      console.error('Error downloading receipt:', error);
+      toast.error('Failed to download receipt',{containerId:"renterDashboard"});
+    }
   };
+  
 
 
   if (loading) {
@@ -199,15 +262,35 @@ const stats = [
 
 
 
-  const recentReceipts = dashboardData?.recentReceipts?.map(receipt => ({
-    id: receipt._id,
-    applianceName: receipt.rental?.listing?.title || 'Unknown Appliance',
-    amount: receipt.amount || 0,
-    date: receipt.paidDate || receipt.rental?.createdAt,
-    status: receipt.status,
-    receiptNumber: receipt.receiptNumber || receipt.rental?.orderNumber
-  })) || [];
-
+  const recentReceipts = dashboardData?.recentReceipts?.map(receipt => {
+    const listing = receipt.rental?.listing || {};
+  
+    return {
+      id: receipt._id,
+      applianceName: listing.title || 'Unknown Appliance',
+      brand: listing.brand || 'N/A',
+      powerType: listing.powerType || 'N/A',
+      monthlyRent: listing.pricing?.rentPrice || 0,
+      deliveryPrice: listing.deliveryPrice || 0,
+      installationPrice: listing.installationPrice || 0,
+      pickUpAddress: listing.pickUpAddress || null,
+  
+      amount: receipt.amount || 0,
+      date: receipt.paidDate || receipt.rental?.createdAt,
+      status: receipt.status || 'Unknown',
+      receiptNumber: receipt.receiptNumber || receipt.rental?.orderNumber,
+  
+      // Optional: if you have credits or service fee
+      vendorFee: receipt.vendorFee || 0,
+      subtotal: receipt.subtotal || 0,
+      creditsApplied: receipt.creditsApplied || 0,
+  
+      // Delivery & installation info
+      deliveryType: receipt.deliveryType || 'delivery', // default delivery
+      installationType: receipt.installationType || 'professional', // default professional
+    };
+  }) || [];
+  
 
 
 
@@ -218,7 +301,7 @@ const stats = [
 
   const confirmRejectDelivery = async () => {
     if (!rejectReason) {
-      alert('Please select a reason for rejection');
+    toast.info('Please select a reason for rejection',{containerId:"renterDashboard"});
       return;
     }
 
@@ -239,16 +322,16 @@ const stats = [
         }
       );
   
-      if (response.data.success) {
-        alert('✅ Delivery & Installation rejected successfully');
+ 
+        toast.success('Delivery & Installation rejected successfully',{containerId:"renterDashboard"});
         setShowRejectModal(false);
         setRejectReason('');
         setSelectedOrderId(null);
         fetchDashboardData(); // Refresh the dashboard
-      }
+      
     } catch (err) {
       console.error('Error rejecting delivery:', err);
-      alert('❌ ' + (err.response?.data?.error || 'Failed to reject delivery'));
+      toast.error((err.response?.data?.error || 'Failed to reject delivery'),{containerId:"renterDashboard"});
     } finally {
       setProcessingReject(false);
     }
@@ -270,13 +353,13 @@ const stats = [
         }
       );
   
-      if (response.data.success) {
-        alert('✅ Delivery & Installation approved successfully!');
+     
+        toast.success('Delivery & Installation approved successfully!',{containerId:"renterDashboard"});
         fetchDashboardData(); // Refresh the dashboard
-      }
+      
     } catch (err) {
       console.error('Error approving delivery:', err);
-      alert('❌ ' + (err.response?.data?.error || 'Failed to approve delivery'));
+      toast.error((err.response?.data?.error || 'Failed to approve delivery'),{containerId:"renterDashboard"});
     } finally {
       setLoading(false);
     }
@@ -396,11 +479,17 @@ const stats = [
 
 
   return (
-    <div className="min-h-screen bg-gray-50">
+<>
+<ToastContainer containerId={"renterDashboard"}/>
+
+
+<div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-3">
+          <div className="flex justify-between cursor-pointer items-center py-4">
+            <div onClick={()=>{
+              navigate('/appliance')
+            }} className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-[#024a47] rounded-lg flex items-center justify-center">
                 <Home className="w-6 h-6 text-white" />
               </div>
@@ -425,7 +514,7 @@ const stats = [
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
+      
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {stats.map((stat, index) => (
             <div key={index} className="bg-white rounded-lg shadow-md p-6">
@@ -442,7 +531,7 @@ const stats = [
           ))}
         </div>
 
-        {/* Quick Actions */}
+      
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <button
             onClick={() => handleNavigation('/appliance')}
@@ -474,7 +563,7 @@ const stats = [
           </button>
         </div>
 
-        {/* Active Rentals Section */}
+     
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-[#024a47]">Active Rentals</h2>
@@ -502,16 +591,31 @@ const stats = [
                       <h3 className="font-semibold text-[#024a47]">{rental.applianceName}</h3>
                       <p className="text-sm text-gray-600">{rental.vendorName}</p>
                       <p className="text-xs text-gray-500">
-  ${rental.monthlyRate}/month • 
-  {rental.startDate 
-  ? new Date(rental.startDate).toLocaleDateString() 
-  : 'Start date not set'
-} 
-- 
-{rental.startDate 
-  ? new Date(new Date(rental.startDate).setMonth(new Date(rental.startDate).getMonth() + 5)).toLocaleDateString() 
-  : 'End date not set'
+                      ${rental.monthlyRate}/month • 
+{
+  rental.startDate
+    ? new Date(rental.startDate).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : 'Start date not set'
 }
+ - 
+{
+  rental.startDate
+    ? new Date(
+        new Date(rental.startDate).setMonth(
+          new Date(rental.startDate).getMonth() + 5
+        )
+      ).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : 'End date not set'
+}
+
 
 </p>
                     </div>
@@ -533,7 +637,7 @@ const stats = [
           )}
         </div>
 
-{/* Completed Orders Section */}
+
 <div className="bg-white rounded-lg shadow-md p-6 mb-6">
   <div className="flex justify-between items-center mb-6">
     <h2 className="text-2xl font-bold text-[#024a47]">Completed Orders</h2>
@@ -567,6 +671,13 @@ const stats = [
               </p>
             </div>
           </div>
+          <Link 
+              to={`/userchat?vendor=${order?.vendor?._id}`}
+              className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-sm font-semibold transition-colors flex items-center justify-center space-x-1 border border-gray-300"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span>Chat with Vendor</span>
+            </Link>
           <div className="flex items-center space-x-3 w-full sm:w-auto">
             <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold capitalize flex items-center space-x-1">
               <CheckCircle className="w-4 h-4" />
@@ -578,10 +689,13 @@ const stats = [
     </div>
   )}
 </div>
-        {/* Pending Approvals Section */}
+       
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-[#024a47]">Pending Approvals</h2>
+          <h2 className="text-2xl font-bold text-[#024a47]">
+  Awaiting Delivery Approval
+</h2>
+
           </div>
           
           {pendingApprovals.length === 0 ? (
@@ -605,8 +719,12 @@ const stats = [
                     <h3 className="font-semibold text-[#024a47]">{request.applianceName}</h3>
                     <p className="text-sm text-gray-600">{request.vendorName}</p>
                     <p className="text-xs text-gray-500">
-                      Requested: {new Date(request.requestedDate).toLocaleDateString()}
-                    </p>
+  Requested: {new Date(request.requestedDate).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  })}
+</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3 w-full sm:w-auto">
@@ -637,7 +755,7 @@ const stats = [
           )}
         </div>
 
-        {/* Recent Receipts Section */}
+      
         <div className="bg-white rounded-lg shadow-md p-6 mb-20 lg:mb-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-[#024a47]">Recent Receipts</h2>
@@ -689,7 +807,7 @@ const stats = [
           )}
         </div>
 
-        {/* Mobile Bottom Navigation */}
+       
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 lg:hidden">
           <div className="flex justify-around py-3">
             <button 
@@ -729,7 +847,9 @@ const stats = [
         </div>
       </div>
       {showRejectModal && <RejectDeliveryModal />}
+      <SupportChatWidget/>
     </div>
+</>
   );
 }
 

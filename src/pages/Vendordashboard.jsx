@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Package, Eye, MessageSquare, DollarSign, Home, LogOut, Plus, TrendingUp, Users, BarChart3, CreditCard, MessageCircle, Share, House, Newspaper } from "lucide-react";
+import { Package, Eye, MessageSquare, DollarSign, Home, LogOut, Plus, TrendingUp, Users, BarChart3, CreditCard, MessageCircle, Share, House, Newspaper, User, DollarSignIcon } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from 'axios';
 import { BASE_URL } from "../baseUrl";
+import VendorSupportChatWidget from "../vendor/vendoradminchat";
+import { toast, ToastContainer } from "react-toastify";
 
 function VendorDashboard() {
   const navigate = useNavigate();
@@ -14,6 +16,7 @@ function VendorDashboard() {
   const [error, setError] = useState(null);
   const [stripeOnboardingData,setStripeOnboardingData]=useState()
   const [stripeLoading, setStripeLoading] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   // Fetch dashboard data on component mount
   useEffect(() => {
     fetchDashboardData();
@@ -24,7 +27,17 @@ function VendorDashboard() {
       setShowStripePopup(true);
     }
   }, [dashboardData]);
-
+  useEffect(() => {
+    console.log("VENDOR IN EFFEct")
+    console.log(dashboardData)
+    if (
+      dashboardData?.vendor?.stripe_connect_status == true &&
+      dashboardData?.vendor?.sucessPopup == false
+    ) {
+      setShowSuccessPopup(true);
+    }
+  }, [dashboardData]);
+  
 
   const fetchDashboardData = async () => {
     try {
@@ -40,6 +53,8 @@ function VendorDashboard() {
       });
 
       console.log(response.data)
+      console.log(dashboardData)
+      console.log("FULL")
       if (response.data.success) {
         setDashboardData(response.data.data);
       }
@@ -61,6 +76,20 @@ function VendorDashboard() {
     window.location.href='/'
   };
 
+
+  const updateVendor=async()=>{
+    try{
+let response=await axios.put(`${BASE_URL}/updateVendorProfile`,{sucessPopup:true},{
+  headers:{
+    Authorization:`Bearer ${localStorage.getItem('vendorToken')}`
+  }
+})
+
+setShowSuccessPopup(false)
+    }catch(e){
+      
+    }
+  }
 
 
   const handleStripeOnboarding = async () => {
@@ -84,7 +113,7 @@ function VendorDashboard() {
       if (data.alreadyConnected) {
         setStripeLoading(false);
         setShowStripePopup(false);
-        alert('✅ Your Stripe account is already connected!');
+        toast.success('Your Stripe account is already connected!',{containerId:"vendorDashboard"});
         fetchDashboardData(); // Refresh to update status
         return;
       }
@@ -98,20 +127,20 @@ function VendorDashboard() {
       }
 
       setStripeLoading(false);
-      alert('Unable to generate Stripe onboarding link. Please try again.');
+      toast.error('Unable to generate Stripe onboarding link. Please try again.',{containerId:"vendorDashboard"});
       
     } catch (error) {
       console.error('Error generating Stripe link:', error);
       setStripeLoading(false);
       
       if (error?.response?.status === 404) {
-        alert('❌ Vendor not found. Please contact support.');
+        toast.error('Vendor not found. Please contact support.',{containerId:"vendorDashboard"});
       } else if (error?.response?.status === 401) {
-        alert('❌ Session expired. Please log in again.');
+        toast.error('Session expired. Please log in again.',{containerId:"vendorDashboard"});
         localStorage.removeItem('vendorToken');
         navigate('/vendorlogin');
       } else {
-        alert('❌ ' + (error?.response?.data?.error || 'Failed to connect to Stripe. Please try again.'));
+        toast.error((error?.response?.data?.error || 'Failed to connect to Stripe. Please try again.'),{containerId:"vendorDashboard"});
       }
     }
   };
@@ -173,8 +202,7 @@ function VendorDashboard() {
       label: 'Engagements', 
       value: (
         (dashboardData?.stats?.engagement?.likes || 0) + 
-        (dashboardData?.stats?.engagement?.inquiries || 0) + 
-        (dashboardData?.stats?.engagement?.shares || 0)
+        (dashboardData?.stats?.engagement?.inquiries || 0) 
       ).toLocaleString(), 
       icon: MessageSquare, 
       color: 'bg-purple-500' 
@@ -187,14 +215,28 @@ function VendorDashboard() {
     }
   ];
 
-  const recentListings = dashboardData?.recentListings?.map(listing => ({
-    id: listing._id,
-    name: listing.title,
-    views: listing.engagement?.views || 0,
-    status: listing.status.charAt(0).toUpperCase() + listing.status.slice(1),
-    boosted: listing.visibility?.isBoosted || false,
-    image: listing.images?.[0]?.url
-  })) || [];
+  const recentListings = dashboardData?.recentListings?.map(listing => {
+    // Find the request once and reuse it
+    const relatedRequest = dashboardData?.requests?.find(
+      request => request.listing?._id === listing._id || request.listing === listing._id
+    );
+    
+    return {
+      id: listing._id,
+      name: listing.title,
+      views: listing.engagement?.views || 0,
+      status: listing.status.charAt(0).toUpperCase() + listing.status.slice(1),
+      boosted: listing.visibility?.isBoosted || false,
+      image: listing.images?.[0]?.url,
+      deliveryType: listing.deliveryType, // From backend
+      request: relatedRequest, // Full request object if needed
+      renterMobile: relatedRequest?.user?.mobile,
+      renterId: relatedRequest?.user?._id
+    };
+  }) || [];
+  console.log("RECENTE")
+  console.log(recentListings)
+  console.log(dashboardData)
 
   const handleRenewListing = async (listingId) => {
     try {
@@ -235,16 +277,21 @@ function VendorDashboard() {
           })
         }));
         
-        alert('Listing renewed successfully! It is now active and available for rent.');
+        toast.success('Listing renewed successfully! It is now active and available for rent.',{containerId:"vendorDashboard"});
       }
     } catch (err) {
       console.error('Error renewing listing:', err);
-      alert(err.response?.data?.error || 'Failed to renew listing');
+      toast.error(err.response?.data?.error || 'Failed to renew listing',{containerId:"vendorDashboard"});
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+  <>
+  <ToastContainer containerId={"vendorDashboard"}/>
+
+
+  <div className="min-h-screen bg-gray-50">
+      <VendorSupportChatWidget/>
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
@@ -336,16 +383,7 @@ function VendorDashboard() {
 </button>
 
 
-          <button
-            onClick={() => handleNavigation('/feed')}
-            className="bg-white hover:bg-gray-50 text-[#024a47] border-2 border-[#024a47] rounded-lg p-6 flex items-center space-x-4 transition-all shadow-md"
-          >
-            <Share className="w-8 h-8" />
-            <div className="text-left">
-              <h3 className="font-semibold text-lg">Community Posts</h3>
-              <p className="text-sm opacity-75">Share posts</p>
-            </div>
-          </button>
+         
 
           <button
             onClick={() => handleNavigation('/chat')}
@@ -384,6 +422,28 @@ function VendorDashboard() {
              
             </div>
           </button>
+
+          <button
+            onClick={() => handleNavigation('/vendorprofile')}
+            className="bg-white hover:bg-gray-50 text-[#024a47] border-2 border-[#024a47] rounded-lg p-6 flex items-center space-x-4 transition-all shadow-md"
+          >
+            <User className="w-8 h-8" />
+            <div className="text-left">
+              <h3 className="font-semibold text-lg">Profile</h3>
+             
+            </div>
+          </button>
+
+          <button
+            onClick={() => handleNavigation('/activerentals')}
+            className="bg-white hover:bg-gray-50 text-[#024a47] border-2 border-[#024a47] rounded-lg p-6 flex items-center space-x-4 transition-all shadow-md"
+          >
+            <DollarSignIcon className="w-8 h-8" />
+            <div className="text-left">
+              <h3 className="font-semibold text-lg">Active Rentals</h3>
+             
+            </div>
+          </button>
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6 mb-20 lg:mb-6">
@@ -419,6 +479,67 @@ function VendorDashboard() {
           <p className="text-sm text-gray-600">{listing.views} views</p>
         </div>
       </Link>
+
+      {listing.status.toLowerCase() === 'sold' && (
+  <div className="flex-1 mx-4 space-y-3">
+    <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4">
+      <div className="flex items-start space-x-3">
+        <div className="flex-shrink-0">
+          <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        {listing.deliveryType && (
+  <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
+    {listing.deliveryType === 'pickup' ? <div className="flex-1">
+          <h4 className="text-sm font-bold text-blue-900 mb-1">⏰ Delivery Required</h4>
+          <p className="text-xs text-blue-800 leading-relaxed">
+          Please contact the renter within 24 hours to confirm the scheduled pickup time. Once the renter has collected the item and you, as the vendor, have confirmed successful pickup in the system, we will initiate the release of the first month’s rental funds to your Stripe account. Funds will only be released after your confirmation that the unit has been picked up.
+          </p>
+        
+        </div> : <div className="flex-1">
+          <h4 className="text-sm font-bold text-blue-900 mb-1">⏰ Delivery Required</h4>
+          <p className="text-xs text-blue-800 leading-relaxed">
+            The renter has completed payment. You have <span className="font-semibold">72 hours</span> to deliver the item. 
+            Failure to deliver on time will result in order cancellation and a negative performance mark.
+          </p>
+          <p className="text-xs text-blue-700 mt-2 font-medium">
+            💬 Please use chat to confirm delivery details with the renter.
+          </p>
+        </div>}
+  </span>
+)}
+       
+      </div>
+    </div>
+
+    {/* Renter Contact Info */}
+    {listing.renterMobile && (
+      <div className="bg-white border-2 border-[#024a47] rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-[#024a47] rounded-full flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-xs text-gray-600 font-semibold">Renter Contact</p>
+              <p className="text-sm font-bold text-[#024a47]">{listing.renterMobile}</p>
+            </div>
+          </div>
+          <Link 
+            to={`/chat?user=${listing.renterId}`}
+            className="flex items-center space-x-2 px-4 py-2 bg-[#024a47] hover:bg-[#035d59] text-white rounded-lg transition-colors text-sm font-semibold"
+          >
+            <MessageCircle className="w-4 h-4" />
+            <span>Chat</span>
+          </Link>
+        </div>
+      </div>
+    )}
+  </div>
+)}
       
       <div className="flex items-center space-x-3">
         {listing.boosted && (
@@ -432,11 +553,21 @@ function VendorDashboard() {
           listing.status === 'Rented' ? 'bg-blue-100 text-blue-800' :
           'bg-purple-100 text-purple-800'
         }`}>
-          {listing.status}
+{
+  listing?.status?.toLowerCase() === "active"
+    ? "Active Listing"
+    : listing?.status?.toLowerCase() === "sold"
+      ? "Order Pending Delivery"
+      : listing?.status?.toLowerCase() === "draft"
+        ? "Under Review"
+        : listing?.status
+}
+
+
         </span>
         
         {/* Renew Listing Button - shown only for Rented/Unavailable listings */}
-        {(listing.status.toLowerCase() === 'sold') && (
+        {(listing.status.toLowerCase() === 'sold' || listing.status.toLowerCase() === 'inactive') && (
           <button
             onClick={(e) => {
               e.preventDefault();
@@ -554,7 +685,47 @@ function VendorDashboard() {
           </div>
         </div>
       )}
+
+
+{showSuccessPopup && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-[#024a47] mb-4">
+                Payout Account Activated! 🎉
+              </h2>
+              <p className="text-gray-700 mb-4">
+                Your payout account is now fully activated. You're all set to start listing your appliances through the RentSimple marketplace.
+              </p>
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={updateVendor}
+                className="flex-1 bg-[#024a47] hover:bg-[#035d59] text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+              >
+               Start Listing Appliances
+              </button>
+              <button
+                onClick={updateVendor}
+                className="px-6 py-3 text-gray-600 hover:text-gray-800 font-semibold border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+   
+
     </div>
+
+  
+  </>
   );
 }
 

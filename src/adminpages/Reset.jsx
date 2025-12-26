@@ -4,6 +4,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { BASE_URL } from '../baseUrl';
+import { toast, ToastContainer } from 'react-toastify';
 
 export default function AdminReset() {
   const [email, setEmail] = useState('');
@@ -43,10 +44,10 @@ const navigate=useNavigate();
 
     setLoading(true);
     if(email.length==0){
-alert("Please enter email")
+toast.info("Please enter email",{containerId:"adminResetPage"})
 return;
     }else if(password.length==0){
-        alert("Please enter password")
+        toast.info("Please enter password",{containerId:"adminResetPage"})
         return;
     }
 
@@ -56,7 +57,7 @@ setTimeout(() => {
     console.log('Email:', email);
     console.log('Password:', password);
     console.log('Remember me:', rememberMe);
-    alert('Reset successful!');
+    toast.success('Reset successful!',{containerId:"adminResetPage"});
     setLoading(false);
     setEmail('');
     setPassword('');
@@ -70,18 +71,21 @@ setTimeout(() => {
   }, 1500);
 }catch(e){
     if(e?.response?.data?.error){
-        alert(e?.response?.data?.error)
+        toast.error(e?.response?.data?.error,{containerId:"adminResetPage"})
     }else{
-        alert("Error while trying to reset")
+        toast.error("Error while trying to reset",{containerId:"adminResetPage"})
     }
 }
 
-    // Simulate API call
+
 
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center p-4">
+  <>
+  <ToastContainer containerId={"adminResetPage"}/>
+  
+  <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-8">
         {/* Header */}
         <div className="text-center mb-8">
@@ -167,5 +171,6 @@ setTimeout(() => {
     
       </div>
     </div>
+  </>
   );
 }

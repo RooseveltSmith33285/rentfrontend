@@ -532,8 +532,7 @@ console.log(e.message)
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
       <div className="bg-white rounded-2xl w-full max-w-2xl p-6 my-4">
         <div className="space-y-6">
-          
-          {/* Close Button */}
+        
           <div className="flex justify-end">
             <button
               onClick={onClose}
@@ -543,14 +542,14 @@ console.log(e.message)
             </button>
           </div>
     
-          {/* Title */}
+      
           <div className="text-center">
             <h1 className="text-4xl font-bold text-[#024a47] leading-tight">
               Rental Agreement
             </h1>
           </div>
     
-          {/* Action Buttons */}
+       
           <div className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto">
             <button
               onClick={() => setShowAgreementContent(true)}
@@ -567,7 +566,7 @@ console.log(e.message)
             </button>
           </div>
         
-          {/* Signature Section */}
+   
           <div className="max-w-lg mx-auto space-y-4">
             <div className="border-2 border-gray-300 rounded-xl p-6">
               {!hasCustomerSignature ? (
@@ -612,7 +611,6 @@ console.log(e.message)
               )}
             </div>
     
-            {/* Terms Checkbox */}
             <label className="flex items-start gap-3 cursor-pointer text-left">
               <div 
                 className={`w-5 h-5 mt-0.5 rounded border-2 border-[#024a47] flex items-center justify-center flex-shrink-0 ${
@@ -627,7 +625,7 @@ console.log(e.message)
               </span>
             </label>
     
-            {/* Submit Button */}
+       
             <button
               onClick={handleAccept}
               disabled={!hasCustomerSignature || !agreedToTerms || loading}
@@ -1469,7 +1467,7 @@ export default function BillingDetailsForm() {
         order: orderResponse.data 
       });
       
-      alert('We are working on your order. Thank you for trusting Rent Simple Deals!');
+      toast.success('We are working on your order. Thank you for trusting Rent Simple Deals!',{containerId:"billingDetailsForm"});
       setShowAgreementModal(false);
       navigate('/confirmation');
       
@@ -1494,180 +1492,183 @@ export default function BillingDetailsForm() {
 
   return (
     <>
-      <div className="max-w-md mx-auto p-8 bg-[#f9faf5] min-h-screen">
+  <ToastContainer containerId={"billingDetailsForm"}/>
+
+
+
+  <div className="max-w-md mx-auto p-8 bg-[#f9faf5] min-h-screen">
     
-        <div className="text-center mb-8">
-          <div className="mb-4">
-            <Lock className="w-16 h-16 text-[#024a47] mx-auto" />
-          </div>
-          <h1 className="text-3xl font-bold text-[#024a47]">Enter Billing Details</h1>
-        </div>
+    <div className="text-center mb-8">
+      <div className="mb-4">
+        <Lock className="w-16 h-16 text-[#024a47] mx-auto" />
+      </div>
+      <h1 className="text-3xl font-bold text-[#024a47]">Enter Billing Details</h1>
+    </div>
 
-       
-        <div className="mb-6">
-          <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <CreditCard className="w-6 h-6 text-[#024a47]" />
-              <div className="flex-1">
-                <input type="text"
-                placeholder="Card Number"
-                    onChange={(e)=>{
-                     setCard({
-                      ...cardState,
-                      card:e.target.value
-                     })
-                     }}
-                     value={cardState.card}
-
-                  className="w-full text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        
-        <div className="mb-6 grid grid-cols-2 gap-4">
-          <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <Calendar className="w-6 h-6 text-[#024a47]" />
-              <div className="flex-1">
-                <input
-                 placeholder="Card Expiray"
-                      onChange={(e)=>{
-                  setCard({
-                    ...cardState,
-                    expirey:e.target.value
-                  })
+   
+    <div className="mb-6">
+      <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <CreditCard className="w-6 h-6 text-[#024a47]" />
+          <div className="flex-1">
+            <input type="text"
+            placeholder="Card Number"
+                onChange={(e)=>{
+                 setCard({
+                  ...cardState,
+                  card:e.target.value
+                 })
                  }}
-                 value={cardState.expirey}
-                  className="w-full text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
-                />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <MoreHorizontal className="w-6 h-6 text-[#024a47]" />
-              <div className="flex-1">
-                <input type="text"
-                 placeholder="CVC"
-                       onChange={(e)=>{
-                        setCard({
-                          ...cardState,
-                          cvc:e.target.value
-                        })
-                       }}
-                       value={cardState.cvc}
-                  className="w-full text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+                 value={cardState.card}
 
-      
-        <div className="mb-8">
-          <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-6 h-6 border-2 border-[#024a47] rounded-sm"></div>
-              <input
-                type="text"
-                value={zipCode}
-                onChange={handleZipCodeChange}
-                className="flex-1 text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
-                placeholder="Zip code"
-                maxLength="5"
-              />
-            </div>
-          </div>
-        </div>
-
-    
-     
-
-    
-        <div className="mb-8">
-          <h3 className="text-xl font-bold text-[#024a47] mb-4">Payment Draft Date</h3>
-          <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <Calendar className="w-6 h-6 text-[#024a47]" />
-              <select
-                value={draftDay}
-                onChange={(e) => setDraftDay(parseInt(e.target.value))}
-                className="flex-1 text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none cursor-pointer"
-              >
-                {[...Array(28)].map((_, index) => {
-                  const day = index + 1;
-                  const suffix = day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th';
-                  return (
-                    <option key={day} value={day}>
-                      {day}{suffix} of each month
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-          </div>
-          <p className="text-sm text-gray-600 mt-2 ml-4">
-            Select the day of the month you'd like payments to be automatically drafted
-          </p>
-        </div>
-
-       
-        <div className="mb-8">
-          <div className="flex justify-center gap-8 mb-6">
-            <div className="text-center">
-              <RefrigeratorIcon />
-              <p className="text-sm font-medium text-gray-600 mt-2">Refrigerator</p>
-            </div>
-            <div className="text-center">
-              <WasherDryerIcon />
-              <p className="text-sm font-medium text-gray-600 mt-2">Washer & Dryer</p>
-            </div>
-            <div className="text-center">
-              <DeepFreezerIcon />
-              <p className="text-sm font-medium text-gray-600 mt-2">Deep Freezer</p>
-            </div>
-          </div>
-        </div>
-
-       
-        <div className="mb-8">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <div 
-              className={`w-8 h-8 rounded-md border-2 border-[#024a47] flex items-center justify-center ${
-                saveCard ? 'bg-[#024a47]' : 'bg-white'
-              }`}
-              onClick={() => setSaveCard(!saveCard)}
-            >
-              {saveCard && <CheckSquare className="w-5 h-5 text-white" />}
-            </div>
-            <span className="text-lg font-medium text-[#024a47]">
-              Save this card for recurring payments
-            </span>
-          </label>
-        </div>
-
-        <button 
-          onClick={handleSubmit}
-         
-          className={`w-full bg-[#024a47] text-white text-xl font-semibold py-4 rounded-2xl shadow-lg transition-colors ${
-          'hover:bg-[#035d57]'
-          }`}
-        >
-          {isProcessing ? 'Processing...' : 'Complete Setup'}
-        </button>
-
-    
-        <div className="mt-4 text-center text-sm text-gray-600">
-          <div className="flex items-center justify-center gap-2">
-            <Lock className="w-4 h-4" />
-            <span>Your card details are secured by Stripe</span>
+              className="w-full text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
+            />
           </div>
         </div>
       </div>
+    </div>
 
+    
+    <div className="mb-6 grid grid-cols-2 gap-4">
+      <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <Calendar className="w-6 h-6 text-[#024a47]" />
+          <div className="flex-1">
+            <input
+             placeholder="Card Expiray"
+                  onChange={(e)=>{
+              setCard({
+                ...cardState,
+                expirey:e.target.value
+              })
+             }}
+             value={cardState.expirey}
+              className="w-full text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
+            />
+          </div>
+        </div>
+      </div>
+      <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <MoreHorizontal className="w-6 h-6 text-[#024a47]" />
+          <div className="flex-1">
+            <input type="text"
+             placeholder="CVC"
+                   onChange={(e)=>{
+                    setCard({
+                      ...cardState,
+                      cvc:e.target.value
+                    })
+                   }}
+                   value={cardState.cvc}
+              className="w-full text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+  
+    <div className="mb-8">
+      <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-6 h-6 border-2 border-[#024a47] rounded-sm"></div>
+          <input
+            type="text"
+            value={zipCode}
+            onChange={handleZipCodeChange}
+            className="flex-1 text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none"
+            placeholder="Zip code"
+            maxLength="5"
+          />
+        </div>
+      </div>
+    </div>
+
+
+ 
+
+
+    <div className="mb-8">
+      <h3 className="text-xl font-bold text-[#024a47] mb-4">Payment Draft Date</h3>
+      <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <Calendar className="w-6 h-6 text-[#024a47]" />
+          <select
+            value={draftDay}
+            onChange={(e) => setDraftDay(parseInt(e.target.value))}
+            className="flex-1 text-xl font-semibold text-[#024a47] bg-transparent border-none outline-none cursor-pointer"
+          >
+            {[...Array(28)].map((_, index) => {
+              const day = index + 1;
+              const suffix = day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th';
+              return (
+                <option key={day} value={day}>
+                  {day}{suffix} of each month
+                </option>
+              );
+            })}
+          </select>
+        </div>
+      </div>
+      <p className="text-sm text-gray-600 mt-2 ml-4">
+        Select the day of the month you'd like payments to be automatically drafted
+      </p>
+    </div>
+
+   
+    <div className="mb-8">
+      <div className="flex justify-center gap-8 mb-6">
+        <div className="text-center">
+          <RefrigeratorIcon />
+          <p className="text-sm font-medium text-gray-600 mt-2">Refrigerator</p>
+        </div>
+        <div className="text-center">
+          <WasherDryerIcon />
+          <p className="text-sm font-medium text-gray-600 mt-2">Washer & Dryer</p>
+        </div>
+        <div className="text-center">
+          <DeepFreezerIcon />
+          <p className="text-sm font-medium text-gray-600 mt-2">Deep Freezer</p>
+        </div>
+      </div>
+    </div>
+
+   
+    <div className="mb-8">
+      <label className="flex items-center gap-3 cursor-pointer">
+        <div 
+          className={`w-8 h-8 rounded-md border-2 border-[#024a47] flex items-center justify-center ${
+            saveCard ? 'bg-[#024a47]' : 'bg-white'
+          }`}
+          onClick={() => setSaveCard(!saveCard)}
+        >
+          {saveCard && <CheckSquare className="w-5 h-5 text-white" />}
+        </div>
+        <span className="text-lg font-medium text-[#024a47]">
+          Save this card for recurring payments
+        </span>
+      </label>
+    </div>
+
+    <button 
+      onClick={handleSubmit}
+     
+      className={`w-full bg-[#024a47] text-white text-xl font-semibold py-4 rounded-2xl shadow-lg transition-colors ${
+      'hover:bg-[#035d57]'
+      }`}
+    >
+      {isProcessing ? 'Processing...' : 'Complete Setup'}
+    </button>
+
+
+    <div className="mt-4 text-center text-sm text-gray-600">
+      <div className="flex items-center justify-center gap-2">
+        <Lock className="w-4 h-4" />
+        <span>Your card details are secured by Stripe</span>
+      </div>
+    </div>
+  </div>
    
       <AgreementModal
         isOpen={showAgreementModal}

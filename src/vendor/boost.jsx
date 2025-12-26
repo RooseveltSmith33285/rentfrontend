@@ -6,6 +6,8 @@ import { Link } from 'react-router-dom';
 import { Home } from 'lucide-react';
 import { useContext } from 'react';
 import { SocketContext } from '../context/socketContext';
+import VendorSupportChatWidget from './vendoradminchat';
+import { toast, ToastContainer } from 'react-toastify';
 
 export default function BoostListingPage() {
   const stripe = useStripe();
@@ -23,7 +25,6 @@ export default function BoostListingPage() {
     views: 0,
     likes: 0,
     inquiries: 0,
-    shares: 0
   });
 
   const socketRef = useContext(SocketContext);
@@ -61,7 +62,7 @@ export default function BoostListingPage() {
           // Map API data to component format, providing defaults for missing fields
           const mappedListings = data.listings.map(listing => ({
             ...listing,
-            engagement: listing.engagement || { views: 0, likes: 0, inquiries: 0, shares: 0 },
+            engagement: listing.engagement || { views: 0, likes: 0, inquiries: 0},
             visibility: listing.visibility || { isBoosted: false, visibilityScore: 50 }
           }));
           setListings(mappedListings);
@@ -133,8 +134,7 @@ export default function BoostListingPage() {
         setRealTimeStats(prev => ({
           views: prev.views + Math.floor(Math.random() * 3),
           likes: prev.likes + (Math.random() > 0.7 ? 1 : 0),
-          inquiries: prev.inquiries + (Math.random() > 0.9 ? 1 : 0),
-          shares: prev.shares + (Math.random() > 0.95 ? 1 : 0)
+          inquiries: prev.inquiries + (Math.random() > 0.9 ? 1 : 0)
         }));
       }, 3000);
       return () => clearInterval(interval);
@@ -149,7 +149,7 @@ export default function BoostListingPage() {
 
   const handleBoostSubmit = async () => {
     if (!stripe || !elements) {
-      alert('Stripe is not loaded yet. Please try again.');
+      toast.info('Stripe is not loaded yet. Please try again.',{containerId:"vendorBoost"});
       return;
     }
 
@@ -210,11 +210,11 @@ export default function BoostListingPage() {
         setShowModal(false);
         setBoostAmount(5);
         setBoostDuration(7);
-        alert('Listing boosted successfully! 🚀');
+        toast.success('Listing boosted successfully!',{containerId:"vendorBoost"});
       }
     } catch (error) {
       console.error('Boost error:', error);
-      alert(error.message || 'Failed to boost listing. Please try again.');
+      toast.error(error.message || 'Failed to boost listing. Please try again.',{containerId:"vendorBoost"});
     } finally {
       setLoading(false);
     }
@@ -231,7 +231,12 @@ export default function BoostListingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f3f4e6] p-4 md:p-8">
+   <>
+   <ToastContainer containerId={"vendorBoost"}/>
+   
+
+   <div className="min-h-screen bg-[#f3f4e6] p-4 md:p-8">
+          <VendorSupportChatWidget/>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
@@ -459,13 +464,7 @@ export default function BoostListingPage() {
                         <p className="text-green-600 text-xs mt-1">↑ Live tracking</p>
                       </div>
 
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <p className="text-gray-500 text-sm mb-1">Shares</p>
-                        <p className="text-2xl font-bold text-[#024a47]">
-                          {listing.engagement.shares}
-                        </p>
-                        <p className="text-green-600 text-xs mt-1">↑ Live tracking</p>
-                      </div>
+                 
                     </div>
 
                     <div className="mt-4 pt-4 border-t border-gray-200">
@@ -658,5 +657,6 @@ export default function BoostListingPage() {
         </div>
       )}
     </div>
+   </>
   );
 }

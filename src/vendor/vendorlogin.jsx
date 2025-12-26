@@ -171,14 +171,7 @@ function VendorLogin() {
           </div>
 
           {/* Footer Note */}
-          <div className="text-center mt-6">
-            <p className="text-sm text-gray-600">
-              Need help?{' '}
-              <a href="#" className="text-[#024a47] hover:underline">
-                Contact Support
-              </a>
-            </p>
-          </div>
+        
         </div>
       </div>
     </>

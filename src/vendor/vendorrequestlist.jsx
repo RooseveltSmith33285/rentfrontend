@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import React from 'react';
 import { BASE_URL } from '../baseUrl';
-import { Check, Home } from 'lucide-react';
+import { Check, Home,MessageCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import VendorSupportChatWidget from './vendoradminchat';
+import { toast, ToastContainer } from 'react-toastify';
 
 export default function VendorRequestsListPage() {
   const [requests, setRequests] = useState([]);
@@ -33,7 +35,35 @@ export default function VendorRequestsListPage() {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [rejectRequestId, setRejectRequestId] = useState(null);
+  const [editingAddressId, setEditingAddressId] = useState(null);
+  const [editedAddress, setEditedAddress] = useState({
+    street: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: ''
+  });
+  
+  const [suggestions, setSuggestions] = useState({
+    street: [],
+    city: [],
+    state: [],
+    country: []
+  });
+  
+  const [showSuggestions, setShowSuggestions] = useState({
+    street: false,
+    city: false,
+    state: false,
+    country: false
+  });
 
+  const wrapperRefs = {
+    street: useRef(null),
+    city: useRef(null),
+    state: useRef(null),
+    country: useRef(null)
+  };
   useEffect(() => {
     getVendorRequests();
   }, []);
@@ -41,6 +71,19 @@ export default function VendorRequestsListPage() {
   useEffect(() => {
     applyFilters();
   }, [requests, selectedFilter]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      Object.entries(wrapperRefs).forEach(([key, ref]) => {
+        if (ref.current && !ref.current.contains(event.target)) {
+          setShowSuggestions(prev => ({ ...prev, [key]: false }));
+        }
+      });
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const applyFilters = () => {
     let filtered = [...requests];
@@ -71,12 +114,66 @@ export default function VendorRequestsListPage() {
       setRequests(data.requests || []);
     } catch (e) {
       console.error('Error fetching requests:', e);
-      alert('Error while fetching requests. Please try again.');
+      toast.error('Error while fetching requests. Please try again.',{containerId:"vendorRequestList"});
     } finally {
       setLoading(false);
     }
   };
 
+
+  const handleEditAddress = (request) => {
+    setEditingAddressId(request._id);
+    setEditedAddress({
+      street: request.deliveryAddress?.street || '',
+      city: request.deliveryAddress?.city || '',
+      state: request.deliveryAddress?.state || '',
+      zipCode: request.deliveryAddress?.zipCode || '',
+      country: request.deliveryAddress?.country || ''
+    });
+  };
+
+ 
+
+
+  const handleSaveAddress = async (requestId) => {
+    try {
+      const token = localStorage.getItem('vendorToken');
+      const response = await fetch(`${BASE_URL}/updateDeliveryAddress`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          id: requestId,
+          deliveryAddress: editedAddress
+        })
+      });
+
+      if (response.ok) {
+        toast.success('Delivery address updated successfully', {containerId:"vendorRequestList"});
+        setEditingAddressId(null);
+        getVendorRequests();
+      } else {
+        const data = await response.json();
+        toast.error(data.error || 'Error updating address', {containerId:"vendorRequestList"});
+      }
+    } catch (e) {
+      console.error('Error updating address:', e);
+      toast.error('Error updating address. Please try again.', {containerId:"vendorRequestList"});
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingAddressId(null);
+    setEditedAddress({
+      street: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: ''
+    });
+  };
 
 
   const handleReject = async (requestId) => {
@@ -86,7 +183,7 @@ export default function VendorRequestsListPage() {
 
   const confirmReject = async () => {
     if (!rejectReason) {
-      alert('Please select a reason for rejection');
+      toast.info('Please select a reason for rejection',{containerId:"vendorRequestList"});
       return;
     }
     
@@ -106,24 +203,94 @@ export default function VendorRequestsListPage() {
       });
       
       if (response.ok) {
-        alert('Request rejected');
+        toast.success('Request rejected',{containerId:"vendorRequestList"});
         setShowRejectModal(false);
         setRejectReason('');
         setRejectRequestId(null);
         getVendorRequests();
       } else {
         const data = await response.json();
-        alert(data.error || 'Error rejecting request');
+        toast.error(data.error || 'Error rejecting request',{containerId:"vendorRequestList"});
       }
     } catch (e) {
       console.error('Error rejecting request:', e);
-      alert('Error rejecting request. Please try again.');
+      toast.error('Error rejecting request. Please try again.',{containerId:"vendorRequestList"});
     } finally {
       setProcessingId(null);
     }
   
   };
 
+  const fetchAddressSuggestions = async (field, value) => {
+    if (!value || value.length < 2) {
+      setSuggestions(prev => ({ ...prev, [field]: [] }));
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)}&addressdetails=1&limit=5`
+      );
+      const data = await response.json();
+      
+      let fieldSuggestions = [];
+      
+      if (field === 'street') {
+        fieldSuggestions = data
+          .map(item => item.address?.road || item.display_name.split(',')[0])
+          .filter((value, index, self) => value && self.indexOf(value) === index);
+      } else if (field === 'city') {
+        fieldSuggestions = data
+          .map(item => item.address?.city || item.address?.town || item.address?.village)
+          .filter((value, index, self) => value && self.indexOf(value) === index);
+      } else if (field === 'state') {
+        fieldSuggestions = data
+          .map(item => item.address?.state)
+          .filter((value, index, self) => value && self.indexOf(value) === index);
+      } else if (field === 'country') {
+        fieldSuggestions = data
+          .map(item => item.address?.country)
+          .filter((value, index, self) => value && self.indexOf(value) === index);
+      }
+      
+      setSuggestions(prev => ({ ...prev, [field]: fieldSuggestions }));
+      setShowSuggestions(prev => ({ ...prev, [field]: true }));
+    } catch (error) {
+      console.error('Error fetching address suggestions:', error);
+    }
+  };
+
+  const handleAddressInputChange = (field, value) => {
+    setEditedAddress(prev => ({ ...prev, [field]: value }));
+    fetchAddressSuggestions(field, value);
+  };
+
+  const handleSuggestionSelect = (field, value) => {
+    setEditedAddress(prev => ({ ...prev, [field]: value }));
+    setShowSuggestions(prev => ({ ...prev, [field]: false }));
+    setSuggestions(prev => ({ ...prev, [field]: [] }));
+  };
+
+  const renderSuggestionDropdown = (field) => {
+    if (!showSuggestions[field] || suggestions[field].length === 0) return null;
+
+    return (
+      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+        {suggestions[field].map((suggestion, index) => (
+          <div
+            key={index}
+            onClick={() => handleSuggestionSelect(field, suggestion)}
+            className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm text-gray-700 border-b border-gray-100 last:border-b-0"
+          >
+            {suggestion}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+
+  
   const getPrimaryImage = (images) => {
     if (!images || images.length === 0) return 'https://via.placeholder.com/150';
     const primary = images.find(img => img.isPrimary);
@@ -158,6 +325,7 @@ export default function VendorRequestsListPage() {
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+       
         <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
@@ -256,11 +424,11 @@ export default function VendorRequestsListPage() {
       const file = event.target.files[0];
       if (file) {
         if (file.size > 5 * 1024 * 1024) { // 5MB limit
-          alert('File size should be less than 5MB');
+          toast.info('File size should be less than 5MB',{containerId:"vendorRequestList"});
           return;
         }
         if (!file.type.startsWith('image/')) {
-          alert('Please upload an image file');
+          toast.info('Please upload an image file',{containerId:"vendorRequestList"});
           return;
         }
         
@@ -281,7 +449,7 @@ export default function VendorRequestsListPage() {
       const allPhotosComplete = Object.values(photos).every(photo => photo);
   
   if (!allPhotosComplete) {
-    alert('Please upload all required photos before submitting.');
+    toast.info('Please upload all required photos before submitting.',{containerId:"vendorRequestList"});
     return;
   }
 
@@ -294,7 +462,7 @@ if (!operationalChecks.locationConfirmed) missingChecks.push("Desired Location C
 if (!operationalChecks.unitReady) missingChecks.push("Unit Ready for Purchase & Delivery");
 
 if (missingChecks.length > 0) {
-  alert(`Please complete the following checks:\n\n${missingChecks.join('\n')}`);
+  toast.info(`Please complete the following checks:\n\n${missingChecks.join('\n')}`,{containerId:"vendorRequestList"});
   return;
 }
 
@@ -534,8 +702,8 @@ if (missingChecks.length > 0) {
           {operationalChecks.locationConfirmed && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
         </div>
         <div className="flex-1">
-          <span className="text-lg font-semibold text-gray-900 block mb-1">5. Desired Location Confirmed</span>
-          <p className="text-sm text-gray-600">Installation location verified and accessible</p>
+          <span className="text-lg font-semibold text-gray-900 block mb-1">5. I confirm the unit is fully prepared and ready for delivery to the renter.</span>
+          <p className="text-sm text-gray-600">Installation Installation location verified and accessible</p>
         </div>
       </div>
     </div>
@@ -561,7 +729,7 @@ if (missingChecks.length > 0) {
     </div>
     <div className="flex-1">
       <h3 className="text-2xl font-bold text-gray-900">Unit Ready for Purchase & Delivery</h3>
-      <p className="text-sm text-gray-600 mt-1">Confirm all checks are complete and unit is ready</p>
+      <p className="text-sm text-gray-600 mt-1">I confirm the unit is fully prepared and ready for delivery to the renter.</p>
     </div>
   </div>
 </div>
@@ -616,17 +784,17 @@ if (missingChecks.length > 0) {
       });
   
       if (response.ok) {
-        alert('Request approved successfully!');
+        toast.success('Request approved successfully!',{containerId:"vendorRequestList"});
         setShowPreDelivery(false);
         setSelectedRequestId(null);
         await getVendorRequests();
       } else {
         const data = await response.json();
-        alert(data.error || 'Error approving request');
+        toast.success(data.error || 'Error approving request',{containerId:"vendorRequestList"});
       }
     } catch (e) {
       console.error('Error approving request:', e);
-      alert('Error approving request. Please try again.');
+      toast.error('Error approving request. Please try again.',{containerId:"vendorRequestList"});
     } finally {
       setProcessingId(null);
       setLoading(false);
@@ -693,7 +861,11 @@ if (missingChecks.length > 0) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8">
+ <>
+ <ToastContainer containerId={"vendorRequestList"}/>
+
+
+ <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -708,6 +880,7 @@ if (missingChecks.length > 0) {
           </h1>
           <p className="text-gray-600 mt-2">Manage your incoming rental requests</p>
         </div>
+        <VendorSupportChatWidget/>
 
         {/* Filter Buttons */}
         <div className="flex flex-wrap gap-3 mb-6">
@@ -826,10 +999,161 @@ if (missingChecks.length > 0) {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                             </svg>
                             <span className="text-sm capitalize">{request?.deliveryType}</span>
+                          
                           </div>
                         )}
+
+{request?.pickUpAddress && request?.deliveryType === 'pickup' && (
+  <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+    <div className="flex items-start text-gray-700">
+      <svg className="w-5 h-5 mr-2 text-[#024a47] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+      <div className="flex-1">
+        <h5 className="text-sm font-semibold text-gray-900 mb-1">Customer's Preferred Pickup Address:</h5>
+        <p className="text-sm text-gray-700 mb-2">{request.pickUpAddress}</p>
+        <p className="text-xs text-amber-800 bg-amber-100 px-2 py-1 rounded inline-block">
+          Please confirm this address or suggest an alternative
+        </p>
+      </div>
+    </div>
+  </div>
+)}
                       </div>
                     </div>
+
+                    {request?.deliveryAddress && request?.deliveryType === 'delivery' && (
+  <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+    <div className="flex items-start text-gray-700">
+      <svg className="w-5 h-5 mr-2 text-[#024a47] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+      <div className="flex-1">
+        <div className="flex items-center justify-between mb-2">
+          <h5 className="text-sm font-semibold text-gray-900">Delivery Address:</h5>
+          {editingAddressId !== request._id && (
+            <button
+              onClick={() => handleEditAddress(request)}
+              className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center"
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Edit
+            </button>
+          )}
+        </div>
+        
+        {editingAddressId === request._id ? (
+          <div className="space-y-2">
+            {/* Street Address with Autocomplete */}
+            <div ref={wrapperRefs.street} className="relative">
+              <input
+                type="text"
+                placeholder="Start typing street address..."
+                value={editedAddress.street}
+                onChange={(e) => handleAddressInputChange('street', e.target.value)}
+                onFocus={() => suggestions.street.length > 0 && setShowSuggestions(prev => ({ ...prev, street: true }))}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                autoComplete="off"
+              />
+              {renderSuggestionDropdown('street')}
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2">
+              {/* City with Autocomplete */}
+              <div ref={wrapperRefs.city} className="relative">
+                <input
+                  type="text"
+                  placeholder="City"
+                  value={editedAddress.city}
+                  onChange={(e) => handleAddressInputChange('city', e.target.value)}
+                  onFocus={() => suggestions.city.length > 0 && setShowSuggestions(prev => ({ ...prev, city: true }))}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  autoComplete="off"
+                />
+                {renderSuggestionDropdown('city')}
+              </div>
+              
+              {/* State with Autocomplete */}
+              <div ref={wrapperRefs.state} className="relative">
+                <input
+                  type="text"
+                  placeholder="State"
+                  value={editedAddress.state}
+                  onChange={(e) => handleAddressInputChange('state', e.target.value)}
+                  onFocus={() => suggestions.state.length > 0 && setShowSuggestions(prev => ({ ...prev, state: true }))}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  autoComplete="off"
+                />
+                {renderSuggestionDropdown('state')}
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2">
+              {/* Zip Code (no autocomplete) */}
+              <input
+                type="text"
+                placeholder="Zip Code"
+                value={editedAddress.zipCode}
+                onChange={(e) => setEditedAddress({...editedAddress, zipCode: e.target.value})}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              
+              {/* Country with Autocomplete */}
+              <div ref={wrapperRefs.country} className="relative">
+                <input
+                  type="text"
+                  placeholder="Country"
+                  value={editedAddress.country}
+                  onChange={(e) => handleAddressInputChange('country', e.target.value)}
+                  onFocus={() => suggestions.country.length > 0 && setShowSuggestions(prev => ({ ...prev, country: true }))}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  autoComplete="off"
+                />
+                {renderSuggestionDropdown('country')}
+              </div>
+            </div>
+            
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => handleSaveAddress(request._id)}
+                className="flex-1 py-2 px-3 rounded-lg font-semibold text-xs bg-green-600 hover:bg-green-700 text-white transition-colors"
+              >
+                Save
+              </button>
+              <button
+                onClick={handleCancelEdit}
+                className="flex-1 py-2 px-3 rounded-lg font-semibold text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="text-sm text-gray-700 space-y-0.5">
+            {request.deliveryAddress.street && (
+              <p>{request.deliveryAddress.street}</p>
+            )}
+            <p>
+              {[
+                request.deliveryAddress.city,
+                request.deliveryAddress.state,
+                request.deliveryAddress.zipCode
+              ].filter(Boolean).join(', ')}
+            </p>
+            {request.deliveryAddress.country && (
+              <p className="font-medium">{request.deliveryAddress.country}</p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
+
 
                     {/* Request Info */}
                     <div className="mb-4">
@@ -843,43 +1167,59 @@ if (missingChecks.length > 0) {
                       </div>
                     </div>
 
+    {/* Chat Button */}
+  <Link 
+    to={`/chat?user=${request?.user?._id}`}
+    className="w-full py-2 px-4 rounded-lg font-semibold text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 transition-colors flex items-center justify-center border border-gray-300"
+  >
+    <MessageCircle className="w-5 h-5 mr-2" />
+    Chat with Customer
+  </Link>
                     {/* Action Buttons */}
-                    {(!request.status || request.status === 'pending') && (
-                      <div className="flex gap-3 mt-4">
-                        <button
-                          onClick={() => handleApprove(request._id)}
-                          disabled={processingId === request._id}
-                          className="flex-1 py-2 px-4 rounded-lg font-semibold text-sm bg-[#024a47] hover:bg-[#035d59] text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                        >
-                          {processingId === request._id ? (
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                          ) : (
-                            <>
-                              <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                              Approve
-                            </>
-                          )}
-                        </button>
-                        <button
-                          onClick={() => handleReject(request._id)}
-                          disabled={processingId === request._id}
-                          className="flex-1 py-2 px-4 rounded-lg font-semibold text-sm bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                        >
-                          {processingId === request._id ? (
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                          ) : (
-                            <>
-                              <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                              Reject
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    )}
+                    {(!request.status || request.status === 'pending') ? (
+  <div className="flex gap-3 mt-4">
+    <button
+      onClick={() => handleApprove(request._id)}
+      disabled={processingId === request._id}
+      className="flex-1 py-2 px-4 rounded-lg font-semibold text-sm bg-[#024a47] hover:bg-[#035d59] text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+    >
+      {processingId === request._id ? (
+        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+      ) : (
+        <>
+          <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          Approve
+        </>
+      )}
+    </button>
+    
+    <button
+      onClick={() => handleReject(request._id)}
+      disabled={processingId === request._id}
+      className="flex-1 py-2 px-4 rounded-lg font-semibold text-sm bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+    >
+      {processingId === request._id ? (
+        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+      ) : (
+        <>
+          <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          Reject
+        </>
+      )}
+    </button>
+  </div>
+) : (
+  request.approvedByUser==false?<div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+    <p className="text-sm text-blue-800">
+      <span className="font-semibold">Note:</span> Your order is now in pending status. Next up is delivery and installation—please be ready to confirm and complete these steps when completed.
+    </p>
+  </div>:''
+)}
+                    
                   </div>
                 </div>
               </div>
@@ -900,5 +1240,6 @@ if (missingChecks.length > 0) {
 
       {showRejectModal && <RejectModal />}
     </div>
+ </>
   );
 }

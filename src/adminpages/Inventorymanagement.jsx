@@ -169,7 +169,8 @@ const InventoryManagement = () => {
  
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [comboFilter, setComboFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [conditionFilter, setConditionFilter] = useState('all');
   const [priceFilter, setPriceFilter] = useState('all');
   
 
@@ -186,113 +187,59 @@ const InventoryManagement = () => {
 
   useEffect(() => {
     getProducts();
+    getAllProductsForStats();
   }, [currentPage, itemsPerPage]);
 
  
-  useEffect(() => {
-    const delayedSearch = setTimeout(() => {
-      if (currentPage !== 1) {
-        setCurrentPage(1);
-      } else {
-        getProducts();
-      }
-    }, 500);
-
-    return () => clearTimeout(delayedSearch);
-  }, [searchTerm]);
-
-
   useEffect(() => {
     if (currentPage !== 1) {
       setCurrentPage(1);
     } else {
       getProducts();
+      getAllProductsForStats(); 
     }
-  }, [statusFilter, comboFilter, priceFilter]);
+  }, [statusFilter, categoryFilter, conditionFilter, priceFilter]);
+
+
 
   const getProducts = async () => {
     try {
       setLoading(true);
       
-    
       const queryParams = new URLSearchParams({
         page: currentPage.toString(),
         limit: itemsPerPage.toString(),
         search: searchTerm,
         status: statusFilter,
-        combo: comboFilter,
+        category: categoryFilter,
+        condition: conditionFilter,
         price: priceFilter
       });
 
     
-      let response = await axios.get(`${BASE_URL}/getProducts`);
+      let response = await axios.get(`${BASE_URL}/admin/getProducts?${queryParams.toString()}`);
       console.log("products get", response.data);
-      
-      const allProductsData = response.data.products || [];
-      setAllProducts(allProductsData);
-      
-     
-      let filteredProducts = allProductsData;
-      
-  
-      if (searchTerm) {
-        filteredProducts = filteredProducts.filter(product => 
-          (product.name && product.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (product._id && product._id.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (product.key_features && product.key_features.some(feature => 
-            feature.toLowerCase().includes(searchTerm.toLowerCase())
-          ))
-        );
-      }
-      
-    
-      if (statusFilter !== 'all') {
-        filteredProducts = filteredProducts.filter(product => 
-          product.stock_status && product.stock_status.toLowerCase() === statusFilter.toLowerCase()
-        );
-      }
+      console.log('BASE_URL:', BASE_URL);  
 
- 
-      if (comboFilter !== 'all') {
-        const isCombo = comboFilter === 'combo';
-        filteredProducts = filteredProducts.filter(product => 
-          Boolean(product.combo) === isCombo
-        );
-      }
-
-     
-      if (priceFilter !== 'all') {
-        filteredProducts = filteredProducts.filter(product => {
-          const price = parseFloat(product.monthly_price) || 0;
-          switch (priceFilter) {
-            case 'low': return price <= 50;
-            case 'medium': return price > 50 && price <= 150;
-            case 'high': return price > 150;
-            default: return true;
-          }
-        });
-      }
+    console.log('Making API call...');  
+    console.log("API Response:", response.data);  
+    console.log("Products length:", response.data.products?.length);
       
-     
-      const totalProducts = filteredProducts.length;
-      const totalPages = Math.ceil(totalProducts / itemsPerPage);
-      const startIndex = (currentPage - 1) * itemsPerPage;
-      const endIndex = startIndex + itemsPerPage;
-      const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
-      
-      setProducts(paginatedProducts);
-      setPagination({
-        currentPage,
-        totalPages,
-        totalProducts,
+      const productsData = response.data.products || [];
+      const paginationData = response.data.pagination || {
+        currentPage: 1,
+        totalPages: 1,
+        totalProducts: 0,
         limit: itemsPerPage,
-        hasNext: currentPage < totalPages,
-        hasPrev: currentPage > 1
-      });
+        hasNext: false,
+        hasPrev: false
+      };
       
-      if (paginatedProducts.length > 0) {
-       
-      }
+      setProducts(productsData);
+     
+      setPagination(paginationData);
+      
+   
       
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -312,27 +259,40 @@ const InventoryManagement = () => {
     }
   };
 
-  const getInventoryStats = () => {
-   
-    const allProds = allProducts;
-    const total = allProds.length;
-    const available = allProds.filter(product => product.stock_status === 'available').length;
-    const rented = allProds.filter(product => product.stock_status === 'rented').length;
-    const maintenance = allProds.filter(product => product.stock_status === 'maintenance').length;
-    
-    return { total, available, rented, maintenance };
-  };
 
+const getAllProductsForStats = async () => {
+  try {
+    const response = await axios.get(`${BASE_URL}/admin/getProducts?limit=999999`);
+    setAllProducts(response.data.products || []);
+  } catch (error) {
+    console.error('Error fetching all products for stats:', error);
+  }
+};
+
+const getInventoryStats = () => {
+  const allProds = allProducts;
+  const total = allProds.length;
+  const active = allProds.filter(product => product.status === 'active').length;
+  const available = allProds.filter(product => product.availability?.isAvailable === true).length;
+  const published = allProds.filter(product => product.publishToFeed === true).length;
+  const draft = allProds.filter(product => product.status === 'draft').length;
+  
+  return { total, active, available, published, draft };
+};
   const stats = getInventoryStats();
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'available':
+      case 'active':
         return 'bg-green-100 text-green-800';
       case 'rented':
         return 'bg-blue-100 text-blue-800';
-      case 'maintenance':
-        return 'bg-orange-100 text-orange-800';
+      case 'sold':
+        return 'bg-purple-100 text-purple-800';
+      case 'inactive':
+        return 'bg-gray-100 text-gray-800';
+      case 'draft':
+        return 'bg-yellow-100 text-yellow-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -354,17 +314,61 @@ const InventoryManagement = () => {
     console.log('Edit button clicked for product:', product);
     setEditFormData({
       _id: product._id,
-      name: product.name,
-      monthly_price: product.monthly_price,
-      stock_status: product.stock_status,
-      combo: product.combo,
-      key_features: product.key_features || [],
-      photo: product.photo
+      title: product.title,
+      brand: product.brand,
+      category: product.category,
+      condition: product.condition,
+      rentPrice: product.pricing?.rentPrice || 0,
+      buyPrice: product.pricing?.buyPrice || 0,
+      description: product.description,
+      status: product.status,
+      specifications: product.specifications || new Map(),
+      images: product.images || [],
+      publishToFeed: product.publishToFeed || false
     });
     setImageFile(null);
-    setImagePreview(product.photo || '');
+    setImagePreview(product.images && product.images.length > 0 ? product.images[0].url : '');
     setShowEditModal(true);
   };
+
+
+  const handleActivateListing = async (product) => {
+    try {
+      // Show loading toast
+      const loadingToast = toast.loading('Activating listing...', { containerId: 'inventoryPage' });
+      
+      const formData = new FormData();
+      formData.append('status', 'active');
+      
+      const response = await axios.put(
+        `${BASE_URL}/admin/updateProduct/${product._id}`, 
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      
+   
+        // Dismiss loading toast
+        toast.dismiss(loadingToast);
+        
+        // Show success message
+        toast.success('Listing activated successfully!', { containerId: 'inventoryPage' });
+        
+        // Refresh the products list
+        await getProducts();
+        await getAllProductsForStats();
+      
+    } catch (error) {
+      console.error('Error activating listing:', error);
+      toast.error('Error activating listing: ' + (error.response?.data?.message || error.message), { 
+        containerId: 'inventoryPage' 
+      });
+    }
+  };
+
 
   const handleCloseEditModal = () => {
     setShowEditModal(false);
@@ -381,29 +385,6 @@ const InventoryManagement = () => {
     }));
   };
 
-  const handleKeyFeaturesChange = (index, value) => {
-    const updatedFeatures = [...editFormData.key_features];
-    updatedFeatures[index] = value;
-    setEditFormData(prev => ({
-      ...prev,
-      key_features: updatedFeatures
-    }));
-  };
-
-  const addKeyFeature = () => {
-    setEditFormData(prev => ({
-      ...prev,
-      key_features: [...prev.key_features, '']
-    }));
-  };
-
-  const removeKeyFeature = (index) => {
-    const updatedFeatures = editFormData.key_features.filter((_, i) => i !== index);
-    setEditFormData(prev => ({
-      ...prev,
-      key_features: updatedFeatures
-    }));
-  };
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -430,59 +411,50 @@ const InventoryManagement = () => {
 
   const handleSaveProduct = async () => {
     try {
-      const cleanedData = {
-        ...editFormData,
-        key_features: editFormData.key_features.filter(feature => feature.trim() !== '')
-      };
-
       const formData = new FormData();
-
-      Object.keys(cleanedData).forEach(key => {
-        if (key !== 'photo') {
-          if (Array.isArray(cleanedData[key])) {
-            cleanedData[key].forEach((item, index) => {
-              formData.append(`${key}[${index}]`, item);
-            });
-          } else if (typeof cleanedData[key] === 'object' && cleanedData[key] !== null) {
-            formData.append(key, JSON.stringify(cleanedData[key]));
-          } else {
-            formData.append(key, cleanedData[key]);
-          }
-        }
-      });
-
-      if (imageFile) {
-        formData.append('photo', imageFile);
+  
+ 
+      formData.append('title', editFormData.title || '');
+      formData.append('brand', editFormData.brand || '');
+      formData.append('category', editFormData.category || '');
+      formData.append('condition', editFormData.condition || '');
+      formData.append('description', editFormData.description || '');
+      formData.append('status', editFormData.status || 'draft');
+      formData.append('publishToFeed', editFormData.publishToFeed || false);
+      
+      
+      formData.append('pricing[rentPrice]', editFormData.rentPrice || 0);
+      formData.append('pricing[buyPrice]', editFormData.buyPrice || 0);
+      
+     
+      if (editFormData.specifications && typeof editFormData.specifications === 'object') {
+        Object.entries(editFormData.specifications).forEach(([key, value]) => {
+          formData.append(`specifications[${key}]`, value);
+        });
       }
-
+  
+      if (imageFile) {
+        formData.append('images', imageFile);
+      }
+      
       console.log('Saving product with form data');
       
-      const response = await axios.put(`${BASE_URL}/updateProduct/${editFormData._id}`, formData, {
+      const response = await axios.put(`${BASE_URL}/admin/updateProduct/${editFormData._id}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
       
-      if (response.data.success) {
+      
+     
         toast.success('Product updated successfully!', { containerId: 'inventoryPage' });
         
-        const updatedProduct = response.data.product || {
-          ...cleanedData,
-          photo: response.data.photoUrl || imagePreview || editFormData.photo
-        };
         
-  
-        setProducts(prev => prev.map(product => 
-          product._id === editFormData._id ? updatedProduct : product
-        ));
-        setAllProducts(prev => prev.map(product => 
-          product._id === editFormData._id ? updatedProduct : product
-        ));
+        await getProducts();
+        await getAllProductsForStats();
         
         handleCloseEditModal();
-      } else {
-        toast.error('Failed to update product', { containerId: 'inventoryPage' });
-      }
+      
     } catch (error) {
       console.error('Error updating product:', error);
       toast.error('Error updating product: ' + (error.response?.data?.message || error.message), { 
@@ -490,7 +462,6 @@ const InventoryManagement = () => {
       });
     }
   };
-
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= pagination.totalPages) {
       setCurrentPage(newPage);
@@ -554,22 +525,41 @@ const InventoryManagement = () => {
                 <option value="all">All Status</option>
                 <option value="available">Available</option>
                 <option value="rented">Rented</option>
-                <option value="maintenance">Maintenance</option>
+                <option value="rejected">Rejected</option>
+                <option value="active">Active</option>
               </select>
             </div>
 
             <div className="relative">
-              <select
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={comboFilter}
-                onChange={(e) => setComboFilter(e.target.value)}
-              >
-                <option value="all">All Types</option>
-                <option value="combo">Combo Only</option>
-                <option value="single">Single Only</option>
-              </select>
-            </div>
+  <select
+    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    value={categoryFilter}
+    onChange={(e) => setCategoryFilter(e.target.value)}
+  >
+    <option value="all">All Categories</option>
+    <option value="refrigerator">Refrigerator</option>
+    <option value="washer">Washer</option>
+    <option value="dryer">Dryer</option>
+    <option value="dishwasher">Dishwasher</option>
+    <option value="oven">Oven</option>
+    <option value="microwave">Microwave</option>
+    <option value="other">Other</option>
+  </select>
+</div>
 
+<div className="relative">
+  <select
+    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    value={conditionFilter}
+    onChange={(e) => setConditionFilter(e.target.value)}
+  >
+    <option value="all">All Conditions</option>
+    <option value="New">New</option>
+    <option value="Like New">Like New</option>
+    <option value="Good">Good</option>
+    <option value="Fair">Fair</option>
+  </select>
+</div>
             <div className="relative">
               <select
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -613,34 +603,38 @@ const InventoryManagement = () => {
         </div>
       </div>
 
-      
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="text-center">
-            <p className="text-sm font-medium text-gray-600">Total Inventory</p>
-            <p className="text-3xl font-bold text-gray-900">{stats.total.toLocaleString()}</p>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="text-center">
-            <p className="text-sm font-medium text-gray-600">Available</p>
-            <p className="text-3xl font-bold text-green-600">{stats.available.toLocaleString()}</p>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="text-center">
-            <p className="text-sm font-medium text-gray-600">Rented</p>
-            <p className="text-3xl font-bold text-blue-600">{stats.rented.toLocaleString()}</p>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="text-center">
-            <p className="text-sm font-medium text-gray-600">Maintenance</p>
-            <p className="text-3xl font-bold text-orange-600">{stats.maintenance.toLocaleString()}</p>
-          </div>
-        </div>
-      </div>
-
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="text-center">
+      <p className="text-sm font-medium text-gray-600">Total Listings</p>
+      <p className="text-3xl font-bold text-gray-900">{stats.total.toLocaleString()}</p>
+    </div>
+  </div>
+  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="text-center">
+      <p className="text-sm font-medium text-gray-600">Active</p>
+      <p className="text-3xl font-bold text-green-600">{stats.active.toLocaleString()}</p>
+    </div>
+  </div>
+  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="text-center">
+      <p className="text-sm font-medium text-gray-600">Available</p>
+      <p className="text-3xl font-bold text-blue-600">{stats.available.toLocaleString()}</p>
+    </div>
+  </div>
+  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="text-center">
+      <p className="text-sm font-medium text-gray-600">Published</p>
+      <p className="text-3xl font-bold text-purple-600">{stats.published.toLocaleString()}</p>
+    </div>
+  </div>
+  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="text-center">
+      <p className="text-sm font-medium text-gray-600">Draft</p>
+      <p className="text-3xl font-bold text-orange-600">{stats.draft.toLocaleString()}</p>
+    </div>
+  </div>
+</div>
   
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden relative">
         {loading && (
@@ -664,86 +658,102 @@ const InventoryManagement = () => {
               {searchTerm && (
                 <p className="text-sm text-gray-400 mt-2">Try adjusting your search terms or filters</p>
               )}
-              {!searchTerm && statusFilter === 'all' && comboFilter === 'all' && priceFilter === 'all' && (
-                <p className="text-sm text-gray-400 mt-2">No products are available in the system</p>
-              )}
+             {!searchTerm && statusFilter === 'all' && categoryFilter === 'all' && conditionFilter === 'all' && priceFilter === 'all' && (
+  <p className="text-sm text-gray-400 mt-2">No products are available in the system</p>
+)}
             </div>
           ) : (
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Price</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Combo</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Key Features</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Listing</th>
+<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
+<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Condition</th>
+<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rent Price</th>
+<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buy Price</th>
+<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
+<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {products.map(product => (
                   <tr key={product._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900 capitalize">
-                        {product.name}
-                      </div>
-                      <div className="text-xs text-gray-500 font-mono">
-                        ID: {product._id.slice(-8)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <img 
-                          className="h-10 w-10 rounded-lg object-cover" 
-                          src={product.photo} 
-                          alt={product.name}
-                          onError={(e) => {
-                            e.target.src = 'https://via.placeholder.com/40x40?text=No+Image';
-                          }}
-                        />
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        <span className="font-medium">${product.monthly_price || 0}</span>
-                        <span className="text-gray-500">/month</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(product.stock_status)}`}>
-                        {product.stock_status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        product.combo ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {product.combo ? 'Yes' : 'No'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900 max-w-xs">
-                        {product.key_features && product.key_features.length > 0 ? (
-                          <div className="space-y-1">
-                            {product.key_features.slice(0, 2).map((feature, index) => (
-                              <div key={index} className="text-xs bg-gray-100 px-2 py-1 rounded">
-                                {feature}
-                              </div>
-                            ))}
-                            {product.key_features.length > 2 && (
-                              <div className="text-xs text-gray-500">
-                                +{product.key_features.length - 2} more
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-xs">No features listed</span>
-                        )}
-                      </div>
-                    </td>
+            <td className="px-6 py-4 whitespace-nowrap">
+  <div className="text-sm font-medium text-gray-900">
+    {product.title}
+  </div>
+  <div className="text-xs text-gray-500">
+    {product.brand}
+  </div>
+  <div className="text-xs text-gray-400 font-mono">
+    ID: {product._id.slice(-8)}
+  </div>
+</td>
+<td className="px-6 py-4 whitespace-nowrap">
+  <div className="flex-shrink-0 h-10 w-10">
+    <img 
+      className="h-10 w-10 rounded-lg object-cover" 
+      src={product.images && product.images.length > 0 ? product.images[0].url : ''} 
+      alt={product.title}
+      onError={(e) => {
+        e.target.src = 'https://via.placeholder.com/40x40?text=No+Image';
+      }}
+    />
+  </div>
+</td>
+<td className="px-6 py-4 whitespace-nowrap">
+  <span className="text-sm text-gray-900 capitalize">
+    {product.category}
+  </span>
+</td>
+<td className="px-6 py-4 whitespace-nowrap">
+  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+    product.condition === 'New' ? 'bg-green-100 text-green-800' :
+    product.condition === 'Like New' ? 'bg-blue-100 text-blue-800' :
+    product.condition === 'Good' ? 'bg-yellow-100 text-yellow-800' :
+    'bg-gray-100 text-gray-800'
+  }`}>
+    {product.condition}
+  </span>
+</td>
+<td className="px-6 py-4 whitespace-nowrap">
+  <div className="text-sm text-gray-900">
+    <span className="font-medium">${product.pricing?.rentPrice || 0}</span>
+    <span className="text-gray-500">/mo</span>
+  </div>
+</td>
+<td className="px-6 py-4 whitespace-nowrap">
+  <div className="text-sm text-gray-900">
+    <span className="font-medium">${product.pricing?.buyPrice || 0}</span>
+  </div>
+</td>
+<td className="px-6 py-4 whitespace-nowrap">
+  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(product.status)}`}>
+    {product.status}
+  </span>
+</td>
+<td className="px-6 py-4 whitespace-nowrap">
+  <div className="text-sm text-gray-900">
+    {product.vendor?.name || product.vendor?.businessName || 'N/A'}
+  </div>
+  <div className="text-xs text-gray-500">
+    {product.vendor?.email || ''}
+  </div>
+</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
+                      {product.status !== 'active' && (
+      <button 
+        onClick={() => handleActivateListing(product)}
+        className="text-purple-600 hover:text-purple-900 text-xs bg-purple-100 px-2 py-1 rounded hover:bg-purple-200 transition-colors"
+        type="button"
+      >
+        <CheckCircle className="h-3 w-3 inline mr-1" />
+        Activate
+      </button>
+    )}
                         <button 
                           onClick={() => handleViewProduct(product)}
                           className="text-blue-600 hover:text-blue-900 text-xs bg-blue-100 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
@@ -810,9 +820,9 @@ const InventoryManagement = () => {
             <div className="mt-3">
         =
               <div className="flex items-center justify-between pb-4 border-b border-gray-200">
-                <h3 className="text-2xl font-bold text-gray-900 capitalize">
-                  {selectedProduct.name}
-                </h3>
+              <h3 className="text-2xl font-bold text-gray-900 capitalize">
+  {selectedProduct.title}
+</h3>
                 <button
                   onClick={handleCloseModal}
                   className="text-gray-400 hover:text-gray-600 transition duration-150 ease-in-out"
@@ -826,24 +836,22 @@ const InventoryManagement = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
                   <div className="space-y-4">
-                    <img
-                      src={selectedProduct.photo}
-                      alt={selectedProduct.name}
-                      className="w-full h-64 object-cover rounded-lg shadow-md"
-                      onError={(e) => {
-                        e.target.src = 'https://via.placeholder.com/400x300?text=No+Image+Available';
-                      }}
-                    />
+                  <img
+  src={selectedProduct.images && selectedProduct.images.length > 0 ? selectedProduct.images[0].url : 'https://via.placeholder.com/400x300?text=No+Image+Available'}
+  alt={selectedProduct.title}
+  className="w-full h-64 object-cover rounded-lg shadow-md"
+  onError={(e) => {
+    e.target.src = 'https://via.placeholder.com/400x300?text=No+Image+Available';
+  }}
+/>
                 
                     <div className="flex flex-wrap gap-2">
-                      <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getStatusColor(selectedProduct.stock_status)}`}>
-                        {selectedProduct.stock_status}
-                      </span>
-                      <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
-                        selectedProduct.combo ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {selectedProduct.combo ? 'Combo Package' : 'Single Item'}
-                      </span>
+                    <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getStatusColor(selectedProduct.status)}`}>
+  {selectedProduct.status}
+</span>
+<span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-blue-100 text-blue-800`}>
+  {selectedProduct.category}
+</span>
                     </div>
                   </div>
 
@@ -857,35 +865,44 @@ const InventoryManagement = () => {
                           <span className="text-sm text-gray-900 font-mono">{selectedProduct._id}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-600">Monthly Price:</span>
-                          <span className="text-lg font-bold text-green-600">${selectedProduct.monthly_price}/month</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-600">Status:</span>
-                          <span className="text-sm text-gray-900 capitalize">{selectedProduct.stock_status}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-600">Combo Package:</span>
-                          <span className="text-sm text-gray-900">{selectedProduct.combo ? 'Yes' : 'No'}</span>
-                        </div>
+  <span className="text-sm font-medium text-gray-600">Rent Price:</span>
+  <span className="text-lg font-bold text-green-600">${selectedProduct.pricing?.rentPrice || 0}/month</span>
+</div>
+<div className="flex justify-between items-center">
+  <span className="text-sm font-medium text-gray-600">Buy Price:</span>
+  <span className="text-lg font-bold text-blue-600">${selectedProduct.pricing?.buyPrice || 0}</span>
+</div>
+<div className="flex justify-between items-center">
+  <span className="text-sm font-medium text-gray-600">Status:</span>
+  <span className="text-sm text-gray-900 capitalize">{selectedProduct.status}</span>
+</div>
+<div className="flex justify-between items-center">
+  <span className="text-sm font-medium text-gray-600">Condition:</span>
+  <span className="text-sm text-gray-900">{selectedProduct.condition}</span>
+</div>
                       </div>
                     </div>
 
                   
                     <div>
-                      <h4 className="text-lg font-semibold text-gray-900 mb-2">Key Features</h4>
-                      {selectedProduct.key_features && selectedProduct.key_features.length > 0 ? (
-                        <div className="bg-gray-50 rounded-lg p-4 max-h-48 overflow-y-auto">
-                          <ul className="space-y-2">
-                            {selectedProduct.key_features.map((feature, index) => (
-                              <li key={index} className="flex items-start">
-                                <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                                <span className="text-sm text-gray-700">{feature}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : (
+                    <div>
+  <h4 className="text-lg font-semibold text-gray-900 mb-2">Description</h4>
+  <div className="bg-gray-50 rounded-lg p-4 max-h-48 overflow-y-auto">
+    <p className="text-sm text-gray-700">{selectedProduct.description || 'No description available.'}</p>
+  </div>
+</div>
+{selectedProduct.specifications && Object.keys(selectedProduct.specifications).length > 0 ? (
+    <div className="bg-gray-50 rounded-lg p-4 max-h-48 overflow-y-auto">
+      <ul className="space-y-2">
+        {Object.entries(selectedProduct.specifications).map(([key, value], index) => (
+          <li key={index} className="flex items-start">
+            <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+            <span className="text-sm text-gray-700"><strong>{key}:</strong> {value}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  ): (
                         <div className="bg-gray-50 rounded-lg p-4">
                           <p className="text-sm text-gray-500 italic">No key features listed for this product.</p>
                         </div>
@@ -901,13 +918,17 @@ const InventoryManagement = () => {
                           <span className="text-sm text-gray-900">v{selectedProduct.__v}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-600">Available for Rent:</span>
-                          <span className={`text-sm font-medium ${
-                            selectedProduct.stock_status === 'available' ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            {selectedProduct.stock_status === 'available' ? 'Yes' : 'No'}
-                          </span>
-                        </div>
+  <span className="text-sm font-medium text-gray-600">Brand:</span>
+  <span className="text-sm text-gray-900">{selectedProduct.brand}</span>
+</div>
+<div className="flex justify-between items-center">
+  <span className="text-sm font-medium text-gray-600">Available:</span>
+  <span className={`text-sm font-medium ${
+    selectedProduct.availability?.isAvailable ? 'text-green-600' : 'text-red-600'
+  }`}>
+    {selectedProduct.availability?.isAvailable ? 'Yes' : 'No'}
+  </span>
+</div>
                       </div>
                     </div>
                   </div>
@@ -960,73 +981,134 @@ const InventoryManagement = () => {
               <div className="py-6">
                 <form className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                  
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Product Name
-                        </label>
-                        <input
-                          type="text"
-                          name="name"
-                          value={editFormData.name || ''}
-                          onChange={handleFormChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="Enter product name"
-                        />
-                      </div>
+                  <div className="space-y-4">
+  {/* Product Title */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-2">
+      Product Title
+    </label>
+    <input
+      type="text"
+      name="title"
+      value={editFormData.title || ''}
+      onChange={handleFormChange}
+      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      placeholder="Enter product title"
+    />
+  </div>
 
-                    
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Monthly Price ($)
-                        </label>
-                        <input
-                          type="number"
-                          name="monthly_price"
-                          value={editFormData.monthly_price || ''}
-                          onChange={handleFormChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="Enter monthly price"
-                          min="0"
-                          step="0.01"
-                        />
-                      </div>
+  {/* Brand */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-2">
+      Brand
+    </label>
+    <input
+      type="text"
+      name="brand"
+      value={editFormData.brand || ''}
+      onChange={handleFormChange}
+      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      placeholder="Enter brand name"
+    />
+  </div>
 
-                  
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Stock Status
-                        </label>
-                        <select
-                          name="stock_status"
-                          value={editFormData.stock_status || ''}
-                          onChange={handleFormChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="available">Available</option>
-                          <option value="rented">Rented</option>
-                          <option value="maintenance">Maintenance</option>
-                          <option value="discontinued">Discontinued</option>
-                        </select>
-                      </div>
+  {/* Category */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-2">
+      Category
+    </label>
+    <select
+      name="category"
+      value={editFormData.category || ''}
+      onChange={handleFormChange}
+      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    >
+      <option value="">Select Category</option>
+      <option value="refrigerator">Refrigerator</option>
+      <option value="washer">Washer</option>
+      <option value="dryer">Dryer</option>
+      <option value="dishwasher">Dishwasher</option>
+      <option value="oven">Oven</option>
+      <option value="microwave">Microwave</option>
+      <option value="other">Other</option>
+    </select>
+  </div>
 
-                    
-                      <div>
-                        <label className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            name="combo"
-                            checked={editFormData.combo || false}
-                            onChange={handleFormChange}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          />
-                          <span className="text-sm font-medium text-gray-700">
-                            Combo Package
-                          </span>
-                        </label>
-                      </div>
-                    </div>
+  {/* Condition */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-2">
+      Condition
+    </label>
+    <select
+      name="condition"
+      value={editFormData.condition || ''}
+      onChange={handleFormChange}
+      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    >
+      <option value="">Select Condition</option>
+      <option value="New">New</option>
+      <option value="Like New">Like New</option>
+      <option value="Good">Good</option>
+      <option value="Fair">Fair</option>
+    </select>
+  </div>
+
+  {/* Rent Price */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-2">
+      Rent Price ($/month)
+    </label>
+    <input
+      type="number"
+      name="rentPrice"
+      value={editFormData.rentPrice || ''}
+      onChange={handleFormChange}
+      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      placeholder="Enter rent price"
+      min="0"
+      step="0.01"
+    />
+  </div>
+
+  {/* Buy Price */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-2">
+      Buy Price ($)
+    </label>
+    <input
+      type="number"
+      name="buyPrice"
+      value={editFormData.buyPrice || ''}
+      onChange={handleFormChange}
+      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      placeholder="Enter buy price"
+      min="0"
+      step="0.01"
+    />
+  </div>
+
+  {/* Status */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-2">
+      Status
+    </label>
+    <select
+      name="status"
+      value={editFormData.status || ''}
+      onChange={handleFormChange}
+      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    >
+      <option value="draft">Draft</option>
+      <option value="active">Active</option>
+      <option value="inactive">Inactive</option>
+      <option value="rented">Rented</option>
+      <option value="sold">Sold</option>
+    </select>
+  </div>
+
+  {/* Publish to Feed */}
+
+</div>
 
                  
                     <div className="space-y-4">
@@ -1069,7 +1151,7 @@ const InventoryManagement = () => {
                               type="button"
                               onClick={() => {
                                 setImageFile(null);
-                                setImagePreview(editFormData.photo || '');
+                                setImagePreview(editFormData.images && editFormData.images.length > 0 ? editFormData.images[0].url : '');
                               }}
                               className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 hover:bg-red-700 transition duration-150 ease-in-out"
                             >
@@ -1085,45 +1167,20 @@ const InventoryManagement = () => {
                   </div>
 
               
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <label className="block text-sm font-medium text-gray-700">
-                        Key Features
-                      </label>
-                      <button
-                        type="button"
-                        onClick={addKeyFeature}
-                        className="text-sm bg-blue-100 text-blue-600 px-3 py-1 rounded-md hover:bg-blue-200 transition duration-150 ease-in-out"
-                      >
-                        + Add Feature
-                      </button>
-                    </div>
-                    
-                    <div className="space-y-2 max-h-32 overflow-y-auto">
-                      {editFormData.key_features && editFormData.key_features.length > 0 ? (
-                        editFormData.key_features.map((feature, index) => (
-                          <div key={index} className="flex items-center space-x-2">
-                            <input
-                              type="text"
-                              value={feature}
-                              onChange={(e) => handleKeyFeaturesChange(index, e.target.value)}
-                              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              placeholder={`Feature ${index + 1}`}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeKeyFeature(index)}
-                              className="text-red-600 hover:text-red-800 p-1"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-gray-500 italic">No features added yet. Click "Add Feature" to start.</p>
-                      )}
-                    </div>
-                  </div>
+            {/* Description */}
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Description
+  </label>
+  <textarea
+    name="description"
+    value={editFormData.description || ''}
+    onChange={handleFormChange}
+    rows={4}
+    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    placeholder="Enter product description"
+  />
+</div>
                 </form>
               </div>
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Image, X, Sparkles, Megaphone, Lightbulb, Tag, Send, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 import { BASE_URL } from '../baseUrl';
+import VendorSupportChatWidget from './vendoradminchat';
 
 function CommunityPostPage() {
   const [postType, setPostType] = useState('announcement');
@@ -40,7 +41,7 @@ function CommunityPostPage() {
       console.log('Full response:', response);
       console.log('Response data:', response.data);
       
-      // Handle different response structures
+      
       let listingsData = [];
       
       if (response.data.success && Array.isArray(response.data.data)) {
@@ -177,10 +178,10 @@ function CommunityPostPage() {
         setImages([]);
         setImagePreviews([]);
         setPostType('announcement');
-        
+        alert("Post created sucessfully")
         setTimeout(() => {
           setSuccess(false);
-          window.history.back();
+          window.location.href='/feed';
         }, 2000);
       }
     } catch (err) {
@@ -197,6 +198,7 @@ function CommunityPostPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-10">
+      <VendorSupportChatWidget/>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4">
             <button 

@@ -243,7 +243,7 @@ const handleComment = async () => {
       });
 
       if (response.ok) {
-        window.location.href = '/community/feed';
+        window.location.href = '/feed';
       }
 
     } catch (err) {
@@ -437,16 +437,7 @@ const isLiked = post.likes?.some(like => {
                       />
                       
                       <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-20">
-                        <button
-                          onClick={() => {
-                            window.location.href = `/community/edit/${post._id}`;
-                            setShowDropdown(false);
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-gray-700"
-                        >
-                          <Edit className="w-4 h-4" />
-                          <span>Edit Post</span>
-                        </button>
+                       
                         <button
                           onClick={handleDelete}
                           className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 flex items-center gap-2 text-red-600"
@@ -517,12 +508,7 @@ const isLiked = post.likes?.some(like => {
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Share2 className="w-5 h-5 text-green-500" />
-                <span className="font-semibold text-gray-700">
-                  {formatNumber(post.engagement?.shares || 0)} shares
-                </span>
-              </div>
+              
             </div>
           </div>
 
@@ -618,11 +604,7 @@ const isLiked = post.likes?.some(like => {
                               <span className="font-semibold text-gray-900">
                                 {comment.user?.businessName || comment.user?.name || 'Anonymous'}
                               </span>
-                              {isCommentOwner && (
-                                <span className="text-xs bg-[#024a47] text-white px-2 py-0.5 rounded">
-                                  You
-                                </span>
-                              )}
+                              
                             </div>
                             <span className="text-xs text-gray-500">
                               {formatRelativeTime(comment.createdAt)}

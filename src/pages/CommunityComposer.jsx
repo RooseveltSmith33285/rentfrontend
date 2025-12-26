@@ -1,5 +1,6 @@
 import React,{useState} from "react";
 import { X,ImageIcon } from "lucide-react";
+import { toast, ToastContainer } from "react-toastify";
 
 
 function CommunityComposer({ setCurrentPage }) {
@@ -8,12 +9,17 @@ function CommunityComposer({ setCurrentPage }) {
     const [linkedListing, setLinkedListing] = useState('');
   
     const handlePost = () => {
-      alert('Post published to community feed!');
+    toast.success('Post published to community feed!',{containerId:"communityComposer"});
       setCurrentPage('feed');
     };
   
     return (
-      <div className="min-h-screen pb-20">
+   <>
+   <ToastContainer containerId={"communityComposer"}/>
+   
+
+
+   <div className="min-h-screen pb-20">
         <header className="bg-white shadow-sm">
           <div className="max-w-3xl mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
@@ -40,7 +46,7 @@ function CommunityComposer({ setCurrentPage }) {
   
         <div className="max-w-3xl mx-auto px-4 py-8">
           <div className="bg-white rounded-lg shadow-md p-6">
-            {/* Post Type Selection */}
+         
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-3">Post Type</label>
               <div className="grid grid-cols-3 gap-3">
@@ -65,7 +71,7 @@ function CommunityComposer({ setCurrentPage }) {
               </div>
             </div>
   
-            {/* Content Editor */}
+           
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-3">Content</label>
               <textarea
@@ -85,7 +91,7 @@ function CommunityComposer({ setCurrentPage }) {
               </div>
             </div>
   
-            {/* Link to Listing */}
+        
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-3">Link to Listing (Optional)</label>
               <select
@@ -100,7 +106,7 @@ function CommunityComposer({ setCurrentPage }) {
               </select>
             </div>
   
-            {/* Preview */}
+         
             {postContent && (
               <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                 <h3 className="text-sm font-semibold text-gray-700 mb-3">Preview</h3>
@@ -121,6 +127,7 @@ function CommunityComposer({ setCurrentPage }) {
           </div>
         </div>
       </div>
+   </>
     );
   }
   

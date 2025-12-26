@@ -71,7 +71,7 @@ function FeedDisplay({ setCurrentPage }) {
               </div>
             </div>
   
-            {/* Search and Filter */}
+      
             <div className="flex space-x-3">
               <div className="flex-1 relative">
                 <Search className="w-5 h-5 text-gray-400 absolute left-3 top-3" />
@@ -110,7 +110,7 @@ function FeedDisplay({ setCurrentPage }) {
           <div className="space-y-4">
             {filteredItems.map((item) => (
               <div key={item.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-                {/* Vendor Header */}
+                
                 <div className="p-4 flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-[#024a47] rounded-full flex items-center justify-center">
@@ -129,7 +129,7 @@ function FeedDisplay({ setCurrentPage }) {
                   )}
                 </div>
   
-                {/* Content */}
+              
                 {item.type === 'listing' ? (
                   <div>
                     <div className="px-4 pb-4">
@@ -185,7 +185,7 @@ function FeedDisplay({ setCurrentPage }) {
             ))}
           </div>
   
-          {/* Load More */}
+       
           <div className="text-center mt-8">
             <button className="px-6 py-3 bg-white border-2 border-[#024a47] text-[#024a47] rounded-lg font-semibold hover:bg-[#024a47] hover:text-white transition-all">
               Load More

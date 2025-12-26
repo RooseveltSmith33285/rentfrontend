@@ -69,7 +69,7 @@ function UpdateListing() {
     setError('');
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       if (!token) {
         setError('Please log in to continue');
         window.location.href = '/login';
@@ -162,8 +162,8 @@ console.log(data)
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
     
-    if (images.length + existingImages.length + files.length > 5) {
-      setError('Maximum 5 images allowed');
+    if (images.length + existingImages.length + files.length > 1) {
+      setError('Maximum 1 image allowed');
       return;
     }
 
@@ -215,7 +215,7 @@ console.log(data)
     setSuccess('');
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('vendorToken');
       
     
 
@@ -270,6 +270,7 @@ console.log(data)
       }
 
       setSuccess('Listing updated successfully!');
+      alert("Listing updated successfully!")
       setTimeout(() => {
         window.location.href = '/vendordashboard';
       }, 1500);
@@ -640,27 +641,26 @@ console.log(data)
             )}
 
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-[#024a47] transition-colors">
-              <input
-                type="file"
-                id="image-upload"
-                multiple
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-                disabled={images.length + existingImages.length >= 5}
-              />
-              <label
-                htmlFor="image-upload"
-                className={`cursor-pointer ${images.length + existingImages.length >= 5 ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
+            <input
+  type="file"
+  id="image-upload"
+  accept="image/*"
+  onChange={handleImageUpload}
+  className="hidden"
+  disabled={images.length + existingImages.length >= 1}
+/>
+<label
+  htmlFor="image-upload"
+  className={`cursor-pointer ${images.length + existingImages.length >= 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
+>
                 <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                 <p className="text-gray-600 mb-1">
-                  {images.length + existingImages.length >= 5 
-                    ? 'Maximum 5 images reached' 
+                  {images.length + existingImages.length >= 1 
+                    ? 'Maximum 1 image reached' 
                     : 'Click to upload new images'}
                 </p>
                 <p className="text-sm text-gray-500">
-                  {5 - images.length - existingImages.length} remaining (Max 5)
+                  {1 - images.length - existingImages.length} remaining (Max 1)
                 </p>
               </label>
             </div>

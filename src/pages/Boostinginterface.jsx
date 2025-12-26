@@ -33,7 +33,7 @@ function BoostingInterface({ setCurrentPage }) {
   
         <div className="max-w-4xl mx-auto px-4 py-8">
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Listing Selection */}
+        
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-bold text-[#024a47] mb-4">Select Listing to Boost</h2>
               <div className="space-y-3">
@@ -59,7 +59,7 @@ function BoostingInterface({ setCurrentPage }) {
               </div>
             </div>
   
-            {/* Boost Configuration */}
+           
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-bold text-[#024a47] mb-4">Boost Settings</h2>
               
@@ -129,7 +129,7 @@ function BoostingInterface({ setCurrentPage }) {
             </div>
           </div>
   
-          {/* Active Boosts */}
+       
           <div className="bg-white rounded-lg shadow-md p-6 mt-6">
             <h2 className="text-xl font-bold text-[#024a47] mb-4">Active Boosts</h2>
             <div className="space-y-4">

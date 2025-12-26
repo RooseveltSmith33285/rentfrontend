@@ -236,7 +236,10 @@ const UserDetailModal = ({ user, isOpen, onClose, onEdit }) => {
   };
 
   const getUserStatus = (user) => {
-    return user.billingPaused ? 'suspended' : 'active';
+    if (user.status) {
+      return user.status; 
+    }
+    return user.billingPaused ? 'inactive' : 'active';
   };
 
   return (
@@ -292,7 +295,7 @@ const UserDetailModal = ({ user, isOpen, onClose, onEdit }) => {
                       ? 'bg-green-100 text-green-800' 
                       : 'bg-red-100 text-red-800'
                   }`}>
-                    {getUserStatus(user) === 'active' ? 'Active' : 'Suspended'}
+                    {getUserStatus(user) === 'active' ? 'Active' : 'Inactive'}
                   </span>
                 </div>
               </div>
@@ -558,9 +561,7 @@ const UserManagement = () => {
         hasPrev: false
       });
       
-      if (response.data.users && response.data.users.length > 0) {
     
-      }
     } catch (error) {
       console.error('Error fetching users:', error);
       toast.error('Failed to load users', { containerId: 'userManagement' });
@@ -582,11 +583,13 @@ const UserManagement = () => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString();
   };
-
   const getUserStatus = (user) => {
-    return user.billingPaused ? 'suspended' : 'active';
+   
+    if (user.status) {
+      return user.status; 
+    }
+    return user.billingPaused ? 'inactive' : 'active';
   };
-
   const handleDeleteUser = async (userId) => {
     if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
       try {
@@ -708,7 +711,7 @@ const UserManagement = () => {
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
-                <option value="suspended">Suspended</option>
+                <option value="inactive">Inactive</option>
               </select>
             </div>
 
@@ -781,7 +784,7 @@ const UserManagement = () => {
                             ? 'bg-green-100 text-green-800' 
                             : 'bg-red-100 text-red-800'
                         }`}>
-                          {getUserStatus(user) === 'active' ? 'Active' : 'Suspended'}
+                          {getUserStatus(user) === 'active' ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

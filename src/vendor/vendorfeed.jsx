@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, Filter, TrendingUp, Eye, Heart, MessageSquare, Share2, MoreVertical, Edit, Trash2, Rocket, Home, BarChart3, Plus, CreditCard, Package, AlertCircle, X } from 'lucide-react';
 import axios from 'axios';
 import { BASE_URL } from '../baseUrl';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast, ToastContainer } from 'react-toastify';
 
 function VendorFeed() {
   const navigate = useNavigate();
@@ -155,7 +156,7 @@ function VendorFeed() {
         setFilteredListings(prev => prev.filter(l => l._id !== listingId));
         
         // Show success message
-        alert('Listing deleted successfully');
+        toast.success('Listing deleted successfully',{containerId:"vendorFeedPageNew"});
       }
 
     } catch (err) {
@@ -196,7 +197,7 @@ function VendorFeed() {
           l._id === listingId ? { ...l, status: newStatus } : l
         ));
         
-        alert(response.data.message);
+        toast.success(response.data.message,{containerId:"vendorFeedPageNew"});
       }
 
     } catch (err) {
@@ -212,10 +213,21 @@ function VendorFeed() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+  <>
+  <ToastContainer containerId={"vendorFeedPageNew"}/>
+  
+
+
+  <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <Link to='/vendordashboard'>
+          <button className="hidden lg:flex items-center space-x-2 hover:opacity-80">
+                <Home className="w-5 h-5" />
+                <span>Dashboard</span>
+              </button>
+          </Link>
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-2xl font-bold text-[#024a47]">My Listings Feed</h1>
@@ -284,6 +296,7 @@ function VendorFeed() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between">
+         
             <div className="flex items-center space-x-3">
               <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
               <p className="text-red-800">{error}</p>
@@ -492,12 +505,7 @@ function VendorFeed() {
                       {formatNumber(listing.engagement?.inquiries || 0)}
                     </span>
                   </div>
-                  <div className="flex flex-col items-center">
-                    <Share2 className="w-4 h-4 text-gray-500 mb-1" />
-                    <span className="text-xs font-semibold text-gray-700">
-                      {formatNumber(listing.engagement?.shares || 0)}
-                    </span>
-                  </div>
+                 
                 </div>
               </div>
             </div>
@@ -569,6 +577,9 @@ function VendorFeed() {
         </div>
       </div>
     </div>
+
+
+  </>
   );
 }
 
